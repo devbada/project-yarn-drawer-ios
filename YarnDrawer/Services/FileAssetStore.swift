@@ -1,0 +1,228 @@
+import CryptoKit
+import Foundation
+import PDFKit
+import UniformTypeIdentifiers
+
+enum PatternImportError: LocalizedError {
+    case unsupportedFileType
+    case inaccessibleFile
+    case invalidImage
+    case invalidPDF
+    case pdfConversionFailed
+    case storageFailure
+
+    var errorDescription: String? {
+        switch self {
+        case .unsupportedFileType:
+            "PDF, JPG, JPEG, PNG 파일만 등록할 수 있습니다."
+        case .inaccessibleFile:
+            "선택한 파일에 접근할 수 없습니다. 파일을 다시 선택해 주세요."
+        case .invalidImage:
+            "이미지를 읽을 수 없습니다. 다른 파일을 선택해 주세요."
+        case .invalidPDF:
+            "PDF를 읽을 수 없거나 암호화되어 있습니다."
+        case .pdfConversionFailed:
+            "작업용 PDF 변환에 실패했습니다. 다시 시도해 주세요."
+        case .storageFailure:
+            "파일을 저장하지 못했습니다. 저장 공간을 확인해 주세요."
+        }
+    }
+}
+
+actor FileAssetStore {
+    private let fileManager: FileManager
+    private let patternsRootURL: URL
+
+    init(fileManager: FileManager = .default) {
+        self.fileManager = fileManager
+        let applicationSupport = fileManager.urls(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask
+        )[0]
+        patternsRootURL = applicationSupport
+            .appending(path: "YarnDrawer", directoryHint: .isDirectory)
+            .appending(path: "patterns", directoryHint: .isDirectory)
+    }
+
+    func importPattern(_ draft: PatternImportDraft) throws -> PatternItem {
+        let sourceURL = draft.sourceURL
+        let didAccess = sourceURL.startAccessingSecurityScopedResource()
+        defer {
+            if didAccess {
+                sourceURL.stopAccessingSecurityScopedResource()
+            }
+        }
+
+        guard fileManager.isReadableFile(atPath: sourceURL.path) else {
+            throw PatternImportError.inaccessibleFile
+        }
+
+        let sourceFileType = try resolveFileType(sourceURL)
+        let patternID = UUID()
+        let patternDirectory = patternsRootURL.appending(
+            path: patternID.uuidString,
+            directoryHint: .isDirectory
+        )
+        let originalDirectory = patternDirectory.appending(
+            path: "original",
+            directoryHint: .isDirectory
+        )
+        let viewDirectory = patternDirectory.appending(
+            path: "view",
+            directoryHint: .isDirectory
+        )
+
+        do {
+            try fileManager.createDirectory(
+                at: originalDirectory,
+                withIntermediateDirectories: true
+            )
+            try fileManager.createDirectory(
+                at: viewDirectory,
+                withIntermediateDirectories: true
+            )
+
+            let originalURL = originalDirectory.appending(
+                path: sanitizedFileName(sourceURL.lastPathComponent)
+            )
+            try fileManager.copyItem(at: sourceURL, to: originalURL)
+
+            let originalAsset = try makeAsset(
+                purpose: .original,
+                url: originalURL,
+                root: patternDirectory,
+                mimeType: sourceFileType.mimeType,
+                derivedFromAssetID: nil
+            )
+
+            let viewAsset: FileAsset
+            let pageCount: Int
+
+            if sourceFileType == .pdf {
+                guard let document = PDFDocument(url: originalURL), document.pageCount > 0 else {
+                    throw PatternImportError.invalidPDF
+                }
+                viewAsset = originalAsset
+                pageCount = document.pageCount
+            } else {
+                let viewURL = viewDirectory.appending(path: "document.pdf")
+                try ImagePDFConverter.convert(imageURL: originalURL, outputURL: viewURL)
+                guard let document = PDFDocument(url: viewURL) else {
+                    throw PatternImportError.pdfConversionFailed
+                }
+                viewAsset = try makeAsset(
+                    purpose: .viewPDF,
+                    url: viewURL,
+                    root: patternDirectory,
+                    mimeType: UTType.pdf.preferredMIMEType ?? "application/pdf",
+                    derivedFromAssetID: originalAsset.id
+                )
+                pageCount = document.pageCount
+            }
+
+            let now = Date()
+            return PatternItem(
+                id: patternID,
+                title: draft.title.trimmingCharacters(in: .whitespacesAndNewlines),
+                designerName: draft.designerName.nilIfBlank,
+                craftType: draft.craftType,
+                sourceFileType: sourceFileType,
+                originalAsset: originalAsset,
+                viewAsset: viewAsset,
+                originalFileName: sourceURL.lastPathComponent,
+                pageCount: pageCount,
+                tags: draft.tags,
+                isFavorite: false,
+                progress: 0,
+                lastOpenedAt: nil,
+                createdAt: now,
+                updatedAt: now,
+                thumbnailStyle: draft.craftType == .knitting ? .green : .cream,
+                symbol: draft.craftType == .knitting ? "V" : "○",
+                isSample: false
+            )
+        } catch {
+            try? fileManager.removeItem(at: patternDirectory)
+            if let importError = error as? PatternImportError {
+                throw importError
+            }
+            throw PatternImportError.storageFailure
+        }
+    }
+
+    func fileURL(for asset: FileAsset, patternID: UUID) -> URL {
+        patternsRootURL
+            .appending(path: patternID.uuidString, directoryHint: .isDirectory)
+            .appending(path: asset.storageKey)
+    }
+
+    func deletePatternFiles(patternID: UUID) throws {
+        let patternDirectory = patternsRootURL.appending(
+            path: patternID.uuidString,
+            directoryHint: .isDirectory
+        )
+        guard fileManager.fileExists(atPath: patternDirectory.path) else {
+            return
+        }
+        try fileManager.removeItem(at: patternDirectory)
+    }
+
+    private func resolveFileType(_ url: URL) throws -> SourceFileType {
+        switch url.pathExtension.localizedLowercase {
+        case "pdf": .pdf
+        case "jpg": .jpg
+        case "jpeg": .jpeg
+        case "png": .png
+        default: throw PatternImportError.unsupportedFileType
+        }
+    }
+
+    private func makeAsset(
+        purpose: FileAssetPurpose,
+        url: URL,
+        root: URL,
+        mimeType: String,
+        derivedFromAssetID: UUID?
+    ) throws -> FileAsset {
+        let attributes = try fileManager.attributesOfItem(atPath: url.path)
+        let size = attributes[.size] as? NSNumber
+        return FileAsset(
+            id: UUID(),
+            purpose: purpose,
+            storageKey: url.path.replacingOccurrences(of: root.path + "/", with: ""),
+            mimeType: mimeType,
+            byteSize: size?.int64Value ?? 0,
+            checksumSHA256: try checksum(url),
+            derivedFromAssetID: derivedFromAssetID,
+            createdAt: Date()
+        )
+    }
+
+    private func checksum(_ url: URL) throws -> String {
+        let data = try Data(contentsOf: url, options: .mappedIfSafe)
+        return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    }
+
+    private func sanitizedFileName(_ name: String) -> String {
+        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "._-"))
+        let sanitized = name.unicodeScalars.map { allowed.contains($0) ? Character(String($0)) : "_" }
+        return String(sanitized)
+    }
+}
+
+private extension SourceFileType {
+    var mimeType: String {
+        switch self {
+        case .pdf: "application/pdf"
+        case .jpg, .jpeg: "image/jpeg"
+        case .png: "image/png"
+        }
+    }
+}
+
+private extension String {
+    var nilIfBlank: String? {
+        let value = trimmingCharacters(in: .whitespacesAndNewlines)
+        return value.isEmpty ? nil : value
+    }
+}

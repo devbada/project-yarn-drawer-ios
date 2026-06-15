@@ -1,0 +1,613 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 63;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		06C7D40EFF55970480F7047E /* SymbolsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0AF1321D69D61763DF5FEF1 /* SymbolsView.swift */; };
+		0B416D50FB247D03E033DD8D /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1283EC9FCA02D964AA03584A /* SettingsView.swift */; };
+		12A4D61B8C2E4F6091A3B5C7 /* PatternRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93B5D71F2A4C6E8091B3D5F7 /* PatternRepositoryTests.swift */; };
+		18B6D42F7A9C1E30527496B8 /* ViewerStateRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4C6E82F1B3D507294B6D8F0 /* ViewerStateRepository.swift */; };
+		1EC507294B6D8FA2C4E6081A /* ViewerStateRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5D7F9132C4E6082A4C6E8F0 /* ViewerStateRepositoryTests.swift */; };
+		202E37CB1AD92A8CF303F5C3 /* AnnotationRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B15D914476EE03B793B707C /* AnnotationRepository.swift */; };
+		289BCA1EF8AB200E7E44473F /* PatternModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D3C3E7182B111C2902D70FC /* PatternModels.swift */; };
+		36B4BF40584BC8BECB8DE568 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A372D7B9A0B6418210AE7469 /* Assets.xcassets */; };
+		3B228A59E4B268BE97E33FB7 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D23D72E4762952860897C42 /* RootView.swift */; };
+		3B41685B718B919507AF0A2D /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00E377188E66ACD5A4ED1A71 /* LibraryView.swift */; };
+		4419A79FC639EE078D68759C /* GaugeCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20F0871BD9E5CC1424150EB /* GaugeCalculatorTests.swift */; };
+		451AAABE4D4144D522EA21C9 /* PatternViewerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9570DAFEA4A15A3A9E154DB3 /* PatternViewerView.swift */; };
+		4D7A91C3E5F7082A4C6E8B0D /* PatternDetailsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6E8A0B2D4F617395B7D9F1A /* PatternDetailsView.swift */; };
+		4C9735153091BA326E126B48 /* ImagePDFConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0868DEE256668B7B4672FFC4 /* ImagePDFConverter.swift */; };
+		5BBC65EB86959E26DFE35A92 /* PatternModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AAFB80AF852898300F9808E /* PatternModelTests.swift */; };
+		5D5EF158EFF16073C5F11601 /* FileAssetStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFD340E40483DB0933E16E50 /* FileAssetStore.swift */; };
+		66AB0CE43B0DA2EDAA64AAE0 /* PatternRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA7B6D66DF91CDB00763AE5C /* PatternRepository.swift */; };
+		67ECAA854F2EB365771B0DF8 /* YarnDrawerDesign.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16FC92F607A36303067218B3 /* YarnDrawerDesign.swift */; };
+		96F9ACA8739D60970C03D55E /* YarnDrawerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 690044E3A5253A7110C0BFD9 /* YarnDrawerApp.swift */; };
+		9A6A1BF246A57E67CE823896 /* BrandMarkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC7BCA334BC5D3057B9B214B /* BrandMarkView.swift */; };
+		D03B693A09CEE277BB14B1D5 /* GaugeCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA8B170DA68A4086CCC35C1A /* GaugeCalculator.swift */; };
+		D0A0D8D20C30C844A4945315 /* PatternStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9D0DE59508934E3830EEF66 /* PatternStore.swift */; };
+		D302E79A1349A07D9A371EB5 /* PatternImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 023BA223CB3284522B8A9BF5 /* PatternImportView.swift */; };
+		DB85E1BED0D1BB63A6AD0072 /* PatternCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0198A55A8F9BF4635965E63F /* PatternCardView.swift */; };
+		F1A711CC25716B279A09F519 /* AnnotationModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BA3F901555B7F20E78192CA /* AnnotationModelTests.swift */; };
+		F28AC5FB7C43341FFC57A4D5 /* PDFKitView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 818479110DAE2F306ADFBF8C /* PDFKitView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		B053E08B8FC438EB6C30D032 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 78C15C26C4E3071B950C6DB3 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 5C3076EFDF7C1D3C47E26B48;
+			remoteInfo = YarnDrawer;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		00E377188E66ACD5A4ED1A71 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
+		0198A55A8F9BF4635965E63F /* PatternCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternCardView.swift; sourceTree = "<group>"; };
+		023BA223CB3284522B8A9BF5 /* PatternImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternImportView.swift; sourceTree = "<group>"; };
+		0868DEE256668B7B4672FFC4 /* ImagePDFConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImagePDFConverter.swift; sourceTree = "<group>"; };
+		1283EC9FCA02D964AA03584A /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		16FC92F607A36303067218B3 /* YarnDrawerDesign.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YarnDrawerDesign.swift; sourceTree = "<group>"; };
+		1BF0DA88915DF504F2A8D0D8 /* YarnDrawer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = YarnDrawer.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		395B63CDC01C715C086CEFFA /* YarnDrawerTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = YarnDrawerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		3AAFB80AF852898300F9808E /* PatternModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternModelTests.swift; sourceTree = "<group>"; };
+		3D3C3E7182B111C2902D70FC /* PatternModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternModels.swift; sourceTree = "<group>"; };
+		4B15D914476EE03B793B707C /* AnnotationRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnotationRepository.swift; sourceTree = "<group>"; };
+		690044E3A5253A7110C0BFD9 /* YarnDrawerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YarnDrawerApp.swift; sourceTree = "<group>"; };
+		6D23D72E4762952860897C42 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		818479110DAE2F306ADFBF8C /* PDFKitView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFKitView.swift; sourceTree = "<group>"; };
+		8BA3F901555B7F20E78192CA /* AnnotationModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnotationModelTests.swift; sourceTree = "<group>"; };
+		93B5D71F2A4C6E8091B3D5F7 /* PatternRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternRepositoryTests.swift; sourceTree = "<group>"; };
+		9570DAFEA4A15A3A9E154DB3 /* PatternViewerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternViewerView.swift; sourceTree = "<group>"; };
+		A0AF1321D69D61763DF5FEF1 /* SymbolsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SymbolsView.swift; sourceTree = "<group>"; };
+		A20F0871BD9E5CC1424150EB /* GaugeCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GaugeCalculatorTests.swift; sourceTree = "<group>"; };
+		A372D7B9A0B6418210AE7469 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A4C6E82F1B3D507294B6D8F0 /* ViewerStateRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewerStateRepository.swift; sourceTree = "<group>"; };
+		BC7BCA334BC5D3057B9B214B /* BrandMarkView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrandMarkView.swift; sourceTree = "<group>"; };
+		B5D7F9132C4E6082A4C6E8F0 /* ViewerStateRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewerStateRepositoryTests.swift; sourceTree = "<group>"; };
+		BFD340E40483DB0933E16E50 /* FileAssetStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileAssetStore.swift; sourceTree = "<group>"; };
+		C6E8A0B2D4F617395B7D9F1A /* PatternDetailsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternDetailsView.swift; sourceTree = "<group>"; };
+		D9D0DE59508934E3830EEF66 /* PatternStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternStore.swift; sourceTree = "<group>"; };
+		EA7B6D66DF91CDB00763AE5C /* PatternRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternRepository.swift; sourceTree = "<group>"; };
+		EA8B170DA68A4086CCC35C1A /* GaugeCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GaugeCalculator.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		0A3D39C10150A5545EE70F0B /* YarnDrawerTests */ = {
+			isa = PBXGroup;
+			children = (
+				8BA3F901555B7F20E78192CA /* AnnotationModelTests.swift */,
+				A20F0871BD9E5CC1424150EB /* GaugeCalculatorTests.swift */,
+				3AAFB80AF852898300F9808E /* PatternModelTests.swift */,
+				93B5D71F2A4C6E8091B3D5F7 /* PatternRepositoryTests.swift */,
+				B5D7F9132C4E6082A4C6E8F0 /* ViewerStateRepositoryTests.swift */,
+			);
+			path = YarnDrawerTests;
+			sourceTree = "<group>";
+		};
+		1A3DD41CF4F9E804DF54F1E6 /* Viewer */ = {
+			isa = PBXGroup;
+			children = (
+				EA8B170DA68A4086CCC35C1A /* GaugeCalculator.swift */,
+				9570DAFEA4A15A3A9E154DB3 /* PatternViewerView.swift */,
+				818479110DAE2F306ADFBF8C /* PDFKitView.swift */,
+			);
+			path = Viewer;
+			sourceTree = "<group>";
+		};
+		1B79F1D218BEEF9EE9002315 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				D9D0DE59508934E3830EEF66 /* PatternStore.swift */,
+				6D23D72E4762952860897C42 /* RootView.swift */,
+				690044E3A5253A7110C0BFD9 /* YarnDrawerApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		24DFD82C0BD4444C18A98F89 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				3D3C3E7182B111C2902D70FC /* PatternModels.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		2A48454F56B204F12EB41516 /* Import */ = {
+			isa = PBXGroup;
+			children = (
+				023BA223CB3284522B8A9BF5 /* PatternImportView.swift */,
+			);
+			path = Import;
+			sourceTree = "<group>";
+		};
+		2C4E6081A3B5D7F90B2D4F61 /* Details */ = {
+			isa = PBXGroup;
+			children = (
+				C6E8A0B2D4F617395B7D9F1A /* PatternDetailsView.swift */,
+			);
+			path = Details;
+			sourceTree = "<group>";
+		};
+		3071128AF1317FC5A848B4D7 /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				2C4E6081A3B5D7F90B2D4F61 /* Details */,
+				2A48454F56B204F12EB41516 /* Import */,
+				A439CDCA881F8D1D1D89592D /* Library */,
+				F717B9E2F7CAB4F840A4B2C0 /* Settings */,
+				E4005894885CFB7A79B0E749 /* Symbols */,
+				1A3DD41CF4F9E804DF54F1E6 /* Viewer */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		3A16AF84ABBA60F89636857F /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				1BF0DA88915DF504F2A8D0D8 /* YarnDrawer.app */,
+				395B63CDC01C715C086CEFFA /* YarnDrawerTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		4A050CCFBD4CF2A765BCACE9 /* YarnDrawer */ = {
+			isa = PBXGroup;
+			children = (
+				1B79F1D218BEEF9EE9002315 /* App */,
+				9D012B07817C49BFB8200D60 /* DesignSystem */,
+				3071128AF1317FC5A848B4D7 /* Features */,
+				24DFD82C0BD4444C18A98F89 /* Models */,
+				F0F24F5D19CFF1606E591CF8 /* Resources */,
+				A946799F8898E82A5F73206C /* Services */,
+			);
+			path = YarnDrawer;
+			sourceTree = "<group>";
+		};
+		93881F4BA765586D7ADF2BE3 = {
+			isa = PBXGroup;
+			children = (
+				4A050CCFBD4CF2A765BCACE9 /* YarnDrawer */,
+				0A3D39C10150A5545EE70F0B /* YarnDrawerTests */,
+				3A16AF84ABBA60F89636857F /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		9D012B07817C49BFB8200D60 /* DesignSystem */ = {
+			isa = PBXGroup;
+			children = (
+				BC7BCA334BC5D3057B9B214B /* BrandMarkView.swift */,
+				16FC92F607A36303067218B3 /* YarnDrawerDesign.swift */,
+			);
+			path = DesignSystem;
+			sourceTree = "<group>";
+		};
+		A439CDCA881F8D1D1D89592D /* Library */ = {
+			isa = PBXGroup;
+			children = (
+				00E377188E66ACD5A4ED1A71 /* LibraryView.swift */,
+				0198A55A8F9BF4635965E63F /* PatternCardView.swift */,
+			);
+			path = Library;
+			sourceTree = "<group>";
+		};
+		A946799F8898E82A5F73206C /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				4B15D914476EE03B793B707C /* AnnotationRepository.swift */,
+				BFD340E40483DB0933E16E50 /* FileAssetStore.swift */,
+				0868DEE256668B7B4672FFC4 /* ImagePDFConverter.swift */,
+				EA7B6D66DF91CDB00763AE5C /* PatternRepository.swift */,
+				A4C6E82F1B3D507294B6D8F0 /* ViewerStateRepository.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		E4005894885CFB7A79B0E749 /* Symbols */ = {
+			isa = PBXGroup;
+			children = (
+				A0AF1321D69D61763DF5FEF1 /* SymbolsView.swift */,
+			);
+			path = Symbols;
+			sourceTree = "<group>";
+		};
+		F0F24F5D19CFF1606E591CF8 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				A372D7B9A0B6418210AE7469 /* Assets.xcassets */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		F717B9E2F7CAB4F840A4B2C0 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				1283EC9FCA02D964AA03584A /* SettingsView.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		439330808378C8487984EE1C /* YarnDrawerTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0B8BB241FD532CE1765E7782 /* Build configuration list for PBXNativeTarget "YarnDrawerTests" */;
+			buildPhases = (
+				222606E6CD4E21697F44EE28 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				8C0B5177B25548ED06121C43 /* PBXTargetDependency */,
+			);
+			name = YarnDrawerTests;
+			packageProductDependencies = (
+			);
+			productName = YarnDrawerTests;
+			productReference = 395B63CDC01C715C086CEFFA /* YarnDrawerTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		5C3076EFDF7C1D3C47E26B48 /* YarnDrawer */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 36A6430C000B5152F2814A75 /* Build configuration list for PBXNativeTarget "YarnDrawer" */;
+			buildPhases = (
+				6BDE3DF2B6B80233B7E4F9C1 /* Sources */,
+				28987E7AC79A7946B64FAB20 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = YarnDrawer;
+			packageProductDependencies = (
+			);
+			productName = YarnDrawer;
+			productReference = 1BF0DA88915DF504F2A8D0D8 /* YarnDrawer.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		78C15C26C4E3071B950C6DB3 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 2600;
+			};
+			buildConfigurationList = 6B69AACBB45A12DB13EB97E2 /* Build configuration list for PBXProject "YarnDrawer" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 93881F4BA765586D7ADF2BE3;
+			minimizedProjectReferenceProxies = 1;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				5C3076EFDF7C1D3C47E26B48 /* YarnDrawer */,
+				439330808378C8487984EE1C /* YarnDrawerTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		28987E7AC79A7946B64FAB20 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				36B4BF40584BC8BECB8DE568 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		222606E6CD4E21697F44EE28 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F1A711CC25716B279A09F519 /* AnnotationModelTests.swift in Sources */,
+				4419A79FC639EE078D68759C /* GaugeCalculatorTests.swift in Sources */,
+				5BBC65EB86959E26DFE35A92 /* PatternModelTests.swift in Sources */,
+				12A4D61B8C2E4F6091A3B5C7 /* PatternRepositoryTests.swift in Sources */,
+				1EC507294B6D8FA2C4E6081A /* ViewerStateRepositoryTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6BDE3DF2B6B80233B7E4F9C1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				202E37CB1AD92A8CF303F5C3 /* AnnotationRepository.swift in Sources */,
+				9A6A1BF246A57E67CE823896 /* BrandMarkView.swift in Sources */,
+				5D5EF158EFF16073C5F11601 /* FileAssetStore.swift in Sources */,
+				D03B693A09CEE277BB14B1D5 /* GaugeCalculator.swift in Sources */,
+				4C9735153091BA326E126B48 /* ImagePDFConverter.swift in Sources */,
+				3B41685B718B919507AF0A2D /* LibraryView.swift in Sources */,
+				4D7A91C3E5F7082A4C6E8B0D /* PatternDetailsView.swift in Sources */,
+				F28AC5FB7C43341FFC57A4D5 /* PDFKitView.swift in Sources */,
+				DB85E1BED0D1BB63A6AD0072 /* PatternCardView.swift in Sources */,
+				D302E79A1349A07D9A371EB5 /* PatternImportView.swift in Sources */,
+				289BCA1EF8AB200E7E44473F /* PatternModels.swift in Sources */,
+				66AB0CE43B0DA2EDAA64AAE0 /* PatternRepository.swift in Sources */,
+				D0A0D8D20C30C844A4945315 /* PatternStore.swift in Sources */,
+				451AAABE4D4144D522EA21C9 /* PatternViewerView.swift in Sources */,
+				3B228A59E4B268BE97E33FB7 /* RootView.swift in Sources */,
+				0B416D50FB247D03E033DD8D /* SettingsView.swift in Sources */,
+				06C7D40EFF55970480F7047E /* SymbolsView.swift in Sources */,
+				18B6D42F7A9C1E30527496B8 /* ViewerStateRepository.swift in Sources */,
+				96F9ACA8739D60970C03D55E /* YarnDrawerApp.swift in Sources */,
+				67ECAA854F2EB365771B0DF8 /* YarnDrawerDesign.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		8C0B5177B25548ED06121C43 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 5C3076EFDF7C1D3C47E26B48 /* YarnDrawer */;
+			targetProxy = B053E08B8FC438EB6C30D032 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		70C9A81715B06BCDCDBF4FBC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.YarnDrawerTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/YarnDrawer.app/YarnDrawer";
+			};
+			name = Debug;
+		};
+		777EF03527F26C3291CDED8B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		7E813D4C8B726172C8FC4B49 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		8028C4A922579B6B8FC56733 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = W96LW7FRSD;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "뜨개서랍";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.minam.YarnDrawer;
+				PRODUCT_MODULE_NAME = YarnDrawer;
+				PRODUCT_NAME = YarnDrawer;
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		B433B568ECE6D451DAFAF92F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.YarnDrawerTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/YarnDrawer.app/YarnDrawer";
+			};
+			name = Release;
+		};
+		BFF923BE47E5229D68DCB35E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = W96LW7FRSD;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "뜨개서랍";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.minam.YarnDrawer;
+				PRODUCT_MODULE_NAME = YarnDrawer;
+				PRODUCT_NAME = YarnDrawer;
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0B8BB241FD532CE1765E7782 /* Build configuration list for PBXNativeTarget "YarnDrawerTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				70C9A81715B06BCDCDBF4FBC /* Debug */,
+				B433B568ECE6D451DAFAF92F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		36A6430C000B5152F2814A75 /* Build configuration list for PBXNativeTarget "YarnDrawer" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8028C4A922579B6B8FC56733 /* Debug */,
+				BFF923BE47E5229D68DCB35E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		6B69AACBB45A12DB13EB97E2 /* Build configuration list for PBXProject "YarnDrawer" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7E813D4C8B726172C8FC4B49 /* Debug */,
+				777EF03527F26C3291CDED8B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 78C15C26C4E3071B950C6DB3 /* Project object */;
+}
