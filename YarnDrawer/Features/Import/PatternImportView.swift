@@ -21,10 +21,10 @@ struct PatternImportView: View {
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(selectedURL.lastPathComponent)
-                                    .font(.system(size: 13, weight: .bold))
+                                    .font(YDFont.font(size: 13, weight: .bold))
                                     .foregroundStyle(YDColor.yarn4)
                                 Text(filePolicyDescription)
-                                    .font(.system(size: 12))
+                                    .font(YDFont.font(size: 12))
                                     .foregroundStyle(YDColor.muted)
                             }
                             Spacer()
@@ -61,7 +61,7 @@ struct PatternImportView: View {
 
                     if let message = store.importErrorMessage {
                         Text(message)
-                            .font(.system(size: 13))
+                            .font(YDFont.font(size: 13))
                             .foregroundStyle(YDColor.danger)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(14)
@@ -124,10 +124,10 @@ struct PatternImportView: View {
                 YDIconView(icon: .upload, size: 34)
                     .foregroundStyle(YDColor.wood3)
                 Text("PDF, JPG, JPEG, PNG 선택")
-                    .font(.system(size: 16, weight: .bold))
+                    .font(YDFont.font(size: 16, weight: .bold))
                     .foregroundStyle(YDColor.ink)
                 Text("iCloud Drive, 나의 iPhone, 파일 앱 위치에서 선택할 수 있습니다.")
-                    .font(.system(size: 12))
+                    .font(YDFont.font(size: 12))
                     .foregroundStyle(YDColor.muted)
                     .multilineTextAlignment(.center)
             }
@@ -150,7 +150,7 @@ struct PatternImportView: View {
     ) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
-                .font(.system(size: 12, weight: .heavy))
+                .font(YDFont.font(size: 12, weight: .heavy))
                 .foregroundStyle(YDColor.muted)
             content()
                 .padding(.horizontal, YDSpacing.x3)

@@ -81,11 +81,11 @@ struct PatternDetailsView: View {
                             VStack(alignment: .leading, spacing: YDSpacing.x3) {
                                 HStack {
                                     Text(progress >= 1 ? "완료" : "\(Int(progress * 100))%")
-                                        .font(.system(size: 22, weight: .heavy))
+                                        .font(YDFont.font(size: 22, weight: .heavy))
                                         .foregroundStyle(YDColor.yarn4)
                                     Spacer()
                                     Text("카드 진행 막대에 반영")
-                                        .font(.system(size: 12, weight: .bold))
+                                        .font(YDFont.font(size: 12, weight: .bold))
                                         .foregroundStyle(YDColor.muted)
                                 }
 
@@ -99,7 +99,7 @@ struct PatternDetailsView: View {
                                         Button(value >= 1 ? "완료" : "\(Int(value * 100))%") {
                                             progress = value
                                         }
-                                        .font(.system(size: 12, weight: .bold))
+                                        .font(YDFont.font(size: 12, weight: .bold))
                                         .foregroundStyle(progress == value ? YDColor.cream0 : YDColor.muted)
                                         .frame(maxWidth: .infinity)
                                         .frame(minHeight: 34)
@@ -138,7 +138,7 @@ struct PatternDetailsView: View {
 
                         if let errorMessage {
                             Text(errorMessage)
-                                .font(.system(size: 13))
+                                .font(YDFont.font(size: 13))
                                 .foregroundStyle(YDColor.danger)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(14)
@@ -154,7 +154,7 @@ struct PatternDetailsView: View {
                         Button(pattern.isSample ? "샘플 도안 삭제" : "도안 삭제", role: .destructive) {
                             showsDeleteConfirmation = true
                         }
-                        .font(.system(size: 14, weight: .heavy))
+                        .font(YDFont.font(size: 14, weight: .heavy))
                         .foregroundStyle(YDColor.danger)
                         .frame(maxWidth: .infinity)
                         .frame(minHeight: 48)
@@ -187,7 +187,7 @@ struct PatternDetailsView: View {
                     Button(isSaving ? "저장 중" : "저장") {
                         save()
                     }
-                    .fontWeight(.bold)
+                    .font(YDFont.font(size: 17, weight: .bold))
                     .foregroundStyle(YDColor.yarn4)
                     .disabled(pattern?.isSample != false || isSaving)
                 }
@@ -221,7 +221,7 @@ struct PatternDetailsView: View {
 
     private var readOnlyNotice: some View {
         Text("샘플 도안은 수정할 수 없지만 보관함에서 삭제할 수 있습니다.")
-            .font(.system(size: 13, weight: .bold))
+            .font(YDFont.font(size: 13, weight: .bold))
             .foregroundStyle(YDColor.wood3)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
@@ -246,7 +246,7 @@ struct PatternDetailsView: View {
     ) -> some View {
         VStack(alignment: .leading, spacing: YDSpacing.x3) {
             Text(title)
-                .font(.system(size: 15, weight: .heavy))
+                .font(YDFont.font(size: 15, weight: .heavy))
                 .foregroundStyle(YDColor.ink)
             content()
         }
@@ -261,7 +261,7 @@ struct PatternDetailsView: View {
     ) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
-                .font(.system(size: 12, weight: .heavy))
+                .font(YDFont.font(size: 12, weight: .heavy))
                 .foregroundStyle(YDColor.muted)
             content()
                 .textInputAutocapitalization(.never)
@@ -286,20 +286,20 @@ struct PatternDetailsView: View {
     private func fileInformation(_ pattern: PatternItem) -> some View {
         VStack(alignment: .leading, spacing: YDSpacing.x3) {
             Text("파일 정보")
-                .font(.system(size: 15, weight: .heavy))
+                .font(YDFont.font(size: 15, weight: .heavy))
                 .foregroundStyle(YDColor.ink)
             informationRow("파일명", pattern.originalFileName)
             informationRow("형식", pattern.sourceFileType.rawValue.uppercased())
             informationRow("페이지", "\(pattern.pageCount)쪽")
             if store.missingFilePatternIDs.contains(pattern.id) {
                 Text("원본 또는 작업용 PDF 파일이 누락되었습니다.")
-                    .font(.system(size: 12, weight: .bold))
+                    .font(YDFont.font(size: 12, weight: .bold))
                     .foregroundStyle(YDColor.danger)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.top, YDSpacing.x1)
             } else if store.checksumMismatchPatternIDs.contains(pattern.id) {
                 Text("저장된 파일 checksum이 등록 시점과 다릅니다. 파일을 다시 선택해 복구할 수 있습니다.")
-                    .font(.system(size: 12, weight: .bold))
+                    .font(YDFont.font(size: 12, weight: .bold))
                     .foregroundStyle(YDColor.danger)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.top, YDSpacing.x1)
@@ -308,7 +308,7 @@ struct PatternDetailsView: View {
                 Button("파일 다시 선택") {
                     showsReconnectPicker = true
                 }
-                .font(.system(size: 13, weight: .heavy))
+                .font(YDFont.font(size: 13, weight: .heavy))
                 .foregroundStyle(YDColor.yarn4)
                 .frame(maxWidth: .infinity)
                 .frame(minHeight: 42)
@@ -324,11 +324,11 @@ struct PatternDetailsView: View {
     private func informationRow(_ title: String, _ value: String) -> some View {
         HStack(alignment: .top) {
             Text(title)
-                .font(.system(size: 12, weight: .bold))
+                .font(YDFont.font(size: 12, weight: .bold))
                 .foregroundStyle(YDColor.muted)
                 .frame(width: 54, alignment: .leading)
             Text(value)
-                .font(.system(size: 13))
+                .font(YDFont.font(size: 13))
                 .foregroundStyle(YDColor.ink)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }

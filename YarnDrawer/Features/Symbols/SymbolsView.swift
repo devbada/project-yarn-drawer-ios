@@ -55,11 +55,11 @@ struct SymbolsView: View {
                     HStack(alignment: .bottom) {
                         VStack(alignment: .leading, spacing: 7) {
                             Text("기호")
-                                .font(.system(size: 32, weight: .bold))
+                                .font(YDFont.font(size: 32, weight: .bold))
                                 .tracking(-1.1)
                                 .foregroundStyle(YDColor.ink)
                             Text("공통 기호를 관리합니다. 도안 전용 기호는 뷰어에서 등록합니다.")
-                                .font(.system(size: 14))
+                                .font(YDFont.font(size: 14))
                                 .foregroundStyle(YDColor.muted)
                         }
                         Spacer()
@@ -102,7 +102,7 @@ struct SymbolsView: View {
 
             if let toastMessage {
                 Text(toastMessage)
-                    .font(.system(size: 13, weight: .bold))
+                    .font(YDFont.font(size: 13, weight: .bold))
                     .foregroundStyle(YDColor.cream0)
                     .padding(.horizontal, YDSpacing.x4)
                     .padding(.vertical, YDSpacing.x3)
@@ -142,7 +142,7 @@ struct SymbolsView: View {
     private func symbolCard(_ symbol: KnitSymbol) -> some View {
         HStack(spacing: YDSpacing.x3) {
             Text(symbol.glyph)
-                .font(.system(size: 23, weight: .black))
+                .font(YDFont.font(size: 23, weight: .black))
                 .foregroundStyle(YDColor.yarn4)
                 .frame(width: 58, height: 58)
                 .background(YDColor.surfaceGreen)
@@ -150,17 +150,17 @@ struct SymbolsView: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(symbol.name)
-                    .font(.system(size: 14, weight: .bold))
+                    .font(YDFont.font(size: 14, weight: .bold))
                     .foregroundStyle(YDColor.ink)
                 Text(symbol.metadata)
-                    .font(.system(size: 12))
+                    .font(YDFont.font(size: 12))
                     .foregroundStyle(YDColor.muted)
             }
             Spacer()
             Button("링크") {
                 pendingLinkSymbol = symbol
             }
-            .font(.system(size: 12, weight: .heavy))
+            .font(YDFont.font(size: 12, weight: .heavy))
             .foregroundStyle(YDColor.wood3)
             .frame(minWidth: 44, minHeight: 38)
             .padding(.horizontal, 8)

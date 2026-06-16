@@ -66,11 +66,11 @@ struct LibraryView: View {
             VStack(alignment: .leading, spacing: 18) {
                 VStack(alignment: .leading, spacing: 7) {
                     Text("내 도안")
-                        .font(.system(size: 32, weight: .bold))
+                        .font(YDFont.font(size: 32, weight: .bold))
                         .tracking(-1.1)
                         .foregroundStyle(YDColor.ink)
                     Text("카드를 누르면 마지막 작업 위치로 바로 열립니다.")
-                        .font(.system(size: 14))
+                        .font(YDFont.font(size: 14))
                         .foregroundStyle(YDColor.muted)
                 }
 
@@ -141,7 +141,7 @@ struct LibraryView: View {
             filter = item
         } label: {
             Text(item == .all ? "\(item.title) \(store.patterns.count)" : item.title)
-                .font(.system(size: 13, weight: .bold))
+                .font(YDFont.font(size: 13, weight: .bold))
                 .foregroundStyle(filter == item ? YDColor.cream0 : YDColor.muted)
                 .padding(.horizontal, 13)
                 .frame(minHeight: 38)
@@ -168,10 +168,10 @@ private struct EmptyLibraryState: View {
                 .foregroundStyle(YDColor.wood3)
                 .padding(.bottom, YDSpacing.x1)
             Text(title)
-                .font(.system(size: 16, weight: .bold))
+                .font(YDFont.font(size: 16, weight: .bold))
                 .foregroundStyle(YDColor.ink)
             Text(description)
-                .font(.system(size: 13))
+                .font(YDFont.font(size: 13))
                 .foregroundStyle(YDColor.muted)
                 .multilineTextAlignment(.center)
         }

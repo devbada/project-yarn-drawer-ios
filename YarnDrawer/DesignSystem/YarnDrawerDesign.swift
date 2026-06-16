@@ -1,4 +1,6 @@
 import SwiftUI
+import UIKit
+import CoreText
 
 enum YDColor {
     static let cream0 = Color(hex: 0xFFFDF7)
@@ -46,6 +48,110 @@ enum YDLayout {
     static let minimumTouchTarget: CGFloat = 44
     static let sidebarWidth: CGFloat = 92
     static let thumbnailWidth: CGFloat = 112
+}
+
+enum YDFont {
+    private static let fonts: [(file: String, name: String)] = [
+        ("MaruBuri-ExtraLight", "MaruBuriot-ExtraLight"),
+        ("MaruBuri-Light", "MaruBuriot-Light"),
+        ("MaruBuri-Regular", "MaruBuriot-Regular"),
+        ("MaruBuri-SemiBold", "MaruBuriot-SemiBold"),
+        ("MaruBuri-Bold", "MaruBuriot-Bold")
+    ]
+
+    static func registerFonts() {
+        fonts.forEach { font in
+            guard
+                UIFont(name: font.name, size: 12) == nil,
+                let url = Bundle.main.url(
+                    forResource: font.file,
+                    withExtension: "otf",
+                    subdirectory: "Fonts"
+                )
+            else {
+                return
+            }
+            CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
+        }
+    }
+
+    static func configureNavigationFonts() {
+        let titleAttributes: [NSAttributedString.Key: Any] = [
+            .font: uiFont(size: 17, weight: .semibold),
+            .foregroundColor: UIColor(YDColor.ink)
+        ]
+        let largeTitleAttributes: [NSAttributedString.Key: Any] = [
+            .font: uiFont(size: 32, weight: .bold),
+            .foregroundColor: UIColor(YDColor.ink)
+        ]
+        let appearance = UINavigationBarAppearance()
+        appearance.configureWithDefaultBackground()
+        appearance.titleTextAttributes = titleAttributes
+        appearance.largeTitleTextAttributes = largeTitleAttributes
+        UINavigationBar.appearance().standardAppearance = appearance
+        UINavigationBar.appearance().compactAppearance = appearance
+        UINavigationBar.appearance().scrollEdgeAppearance = appearance
+
+        let barButtonAttributes: [NSAttributedString.Key: Any] = [
+            .font: uiFont(size: 17, weight: .semibold)
+        ]
+        UIBarButtonItem.appearance().setTitleTextAttributes(barButtonAttributes, for: .normal)
+        UIBarButtonItem.appearance().setTitleTextAttributes(barButtonAttributes, for: .highlighted)
+        UIBarButtonItem.appearance().setTitleTextAttributes(barButtonAttributes, for: .disabled)
+
+        UISegmentedControl.appearance().setTitleTextAttributes(
+            [.font: uiFont(size: 13, weight: .semibold)],
+            for: .normal
+        )
+        UISegmentedControl.appearance().setTitleTextAttributes(
+            [.font: uiFont(size: 13, weight: .bold)],
+            for: .selected
+        )
+    }
+
+    static func font(size: CGFloat, weight: Font.Weight = .regular) -> Font {
+        Font.custom(fontName(for: weight), size: size)
+    }
+
+    static func symbol(size: CGFloat, weight: Font.Weight = .regular) -> Font {
+        .system(size: size, weight: weight)
+    }
+
+    static func uiFont(size: CGFloat, weight: UIFont.Weight = .regular) -> UIFont {
+        UIFont(name: fontName(for: weight), size: size) ?? .systemFont(ofSize: size, weight: weight)
+    }
+
+    private static func fontName(for weight: Font.Weight) -> String {
+        if weight == .ultraLight || weight == .thin {
+            return "MaruBuriot-ExtraLight"
+        }
+        if weight == .light {
+            return "MaruBuriot-Light"
+        }
+        if weight == .medium || weight == .semibold {
+            return "MaruBuriot-SemiBold"
+        }
+        if weight == .bold || weight == .heavy || weight == .black {
+            return "MaruBuriot-Bold"
+        }
+        return "MaruBuriot-Regular"
+    }
+
+    private static func fontName(for weight: UIFont.Weight) -> String {
+        if weight == .ultraLight || weight == .thin {
+            return "MaruBuriot-ExtraLight"
+        }
+        if weight == .light {
+            return "MaruBuriot-Light"
+        }
+        if weight == .medium || weight == .semibold {
+            return "MaruBuriot-SemiBold"
+        }
+        if weight == .bold || weight == .heavy || weight == .black {
+            return "MaruBuriot-Bold"
+        }
+        return "MaruBuriot-Regular"
+    }
 }
 
 enum YDIcon: String {
@@ -102,7 +208,7 @@ extension View {
 struct YDPrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 14, weight: .heavy))
+            .font(YDFont.font(size: 14, weight: .heavy))
             .foregroundStyle(YDColor.cream0)
             .frame(maxWidth: .infinity)
             .frame(minHeight: 48)
@@ -115,7 +221,7 @@ struct YDPrimaryButtonStyle: ButtonStyle {
 struct YDSecondaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 14, weight: .heavy))
+            .font(YDFont.font(size: 14, weight: .heavy))
             .foregroundStyle(YDColor.ink)
             .frame(maxWidth: .infinity)
             .frame(minHeight: 48)
@@ -183,4 +289,3 @@ extension Color {
         )
     }
 }
-

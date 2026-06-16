@@ -14,11 +14,11 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 18) {
                     VStack(alignment: .leading, spacing: 7) {
                         Text("설정")
-                            .font(.system(size: 32, weight: .bold))
+                            .font(YDFont.font(size: 32, weight: .bold))
                             .tracking(-1.1)
                             .foregroundStyle(YDColor.ink)
                         Text("작업 환경과 로컬 데이터를 관리합니다.")
-                            .font(.system(size: 14))
+                            .font(YDFont.font(size: 14))
                             .foregroundStyle(YDColor.muted)
                     }
 
@@ -75,7 +75,7 @@ struct SettingsView: View {
 
             if let toastMessage {
                 Text(toastMessage)
-                    .font(.system(size: 13, weight: .bold))
+                    .font(YDFont.font(size: 13, weight: .bold))
                     .foregroundStyle(YDColor.cream0)
                     .padding(.horizontal, YDSpacing.x4)
                     .padding(.vertical, YDSpacing.x3)
@@ -120,16 +120,16 @@ struct SettingsView: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
-                        .font(.system(size: 14, weight: .bold))
+                        .font(YDFont.font(size: 14, weight: .bold))
                         .foregroundStyle(isDestructive ? YDColor.danger : YDColor.ink)
                     Text(description)
-                        .font(.system(size: 12))
+                        .font(YDFont.font(size: 12))
                         .foregroundStyle(YDColor.muted)
                         .multilineTextAlignment(.leading)
                 }
                 Spacer()
                 Text("›")
-                    .font(.system(size: 22))
+                    .font(YDFont.font(size: 22))
                     .foregroundStyle(YDColor.muted)
             }
             .padding(.horizontal, 14)
@@ -196,17 +196,17 @@ private struct AppInfoView: View {
             VStack(alignment: .leading, spacing: YDSpacing.x4) {
                 BrandMarkView(size: 64)
                 Text("뜨개서랍")
-                    .font(.system(size: 28, weight: .heavy))
+                    .font(YDFont.font(size: 28, weight: .heavy))
                     .foregroundStyle(YDColor.ink)
                 Text("버전 \(appVersion)")
-                    .font(.system(size: 14, weight: .bold))
+                    .font(YDFont.font(size: 14, weight: .bold))
                     .foregroundStyle(YDColor.yarn4)
                 Text("라이선스")
-                    .font(.system(size: 16, weight: .heavy))
+                    .font(YDFont.font(size: 16, weight: .heavy))
                     .foregroundStyle(YDColor.ink)
                     .padding(.top, YDSpacing.x2)
                 Text("앱 아이콘과 디자인 자산은 뜨개서랍 프로젝트 자산입니다. 외부 오픈소스 패키지는 현재 사용하지 않습니다.")
-                    .font(.system(size: 13))
+                    .font(YDFont.font(size: 13))
                     .foregroundStyle(YDColor.muted)
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer()

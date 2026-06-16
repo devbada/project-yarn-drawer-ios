@@ -52,12 +52,12 @@ struct GaugeCalculatorView: View {
 
                     VStack(alignment: .leading, spacing: 5) {
                         Text(result.map { "\($0.roundedStitchCount)코" } ?? "입력 확인")
-                            .font(.system(size: 24, weight: .bold))
+                            .font(YDFont.font(size: 24, weight: .bold))
                             .foregroundStyle(result == nil ? YDColor.danger : YDColor.yarn4)
                         Text(result.map {
                             "1cm당 \(format($0.stitchesPerCentimeter))코 · \(format($0.rawStitchCount))코를 가장 가까운 정수로 반올림"
                         } ?? "모든 값에 0보다 큰 숫자를 입력해 주세요.")
-                        .font(.system(size: 12))
+                        .font(YDFont.font(size: 12))
                         .foregroundStyle(YDColor.muted)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -88,7 +88,7 @@ struct GaugeCalculatorView: View {
     private func numberField(_ title: String, value: Binding<String>) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
-                .font(.system(size: 12, weight: .heavy))
+                .font(YDFont.font(size: 12, weight: .heavy))
                 .foregroundStyle(YDColor.muted)
             TextField(title, text: value)
                 .keyboardType(.decimalPad)

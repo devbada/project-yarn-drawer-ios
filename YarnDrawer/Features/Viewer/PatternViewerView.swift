@@ -119,7 +119,7 @@ struct PatternViewerView: View {
                 VStack {
                     Spacer()
                     Text(toastMessage)
-                        .font(.system(size: 13, weight: .bold))
+                        .font(YDFont.font(size: 13, weight: .bold))
                         .foregroundStyle(YDColor.cream0)
                         .padding(.horizontal, YDSpacing.x4)
                         .padding(.vertical, YDSpacing.x3)
@@ -216,11 +216,11 @@ struct PatternViewerView: View {
             Spacer()
             VStack(spacing: 2) {
                 Text(store.pattern(id: pattern.id)?.title ?? pattern.title)
-                    .font(.system(size: 14, weight: .bold))
+                    .font(YDFont.font(size: 14, weight: .bold))
                     .foregroundStyle(YDColor.ink)
                     .lineLimit(1)
                 Text(viewerStatus)
-                    .font(.system(size: 11, weight: .bold))
+                    .font(YDFont.font(size: 11, weight: .bold))
                     .foregroundStyle(YDColor.yarn4)
                     .accessibilityLabel(viewerStatus)
             }
@@ -260,7 +260,7 @@ struct PatternViewerView: View {
                 .overlay(alignment: .top) {
                     if isOriginalMode {
                         Text("원본 보기 · 표시 도구 잠김")
-                            .font(.system(size: 12, weight: .bold))
+                            .font(YDFont.font(size: 12, weight: .bold))
                             .foregroundStyle(YDColor.ink)
                             .padding(.horizontal, YDSpacing.x3)
                             .padding(.vertical, YDSpacing.x2)
@@ -269,7 +269,7 @@ struct PatternViewerView: View {
                             .padding(.top, YDSpacing.x3)
                     } else if selectedTool == .highlight {
                         Text("한 손가락 드래그: 형광펜 · 두 손가락 드래그: 이동")
-                            .font(.system(size: 12, weight: .bold))
+                            .font(YDFont.font(size: 12, weight: .bold))
                             .foregroundStyle(YDColor.ink)
                             .padding(.horizontal, YDSpacing.x3)
                             .padding(.vertical, YDSpacing.x2)
@@ -326,7 +326,7 @@ struct PatternViewerView: View {
                     VStack(spacing: 3) {
                         toolIcon(tool)
                         Text(tool.title)
-                            .font(.system(size: 10, weight: .bold))
+                            .font(YDFont.font(size: 10, weight: .bold))
                     }
                     .foregroundStyle(selectedTool == tool ? YDColor.yarn4 : YDColor.muted)
                     .frame(maxWidth: .infinity)
@@ -346,7 +346,7 @@ struct PatternViewerView: View {
                 VStack(spacing: 3) {
                     YDIconView(icon: .more, size: 22)
                     Text("더보기")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(YDFont.font(size: 10, weight: .bold))
                 }
                 .foregroundStyle(YDColor.muted)
                 .frame(maxWidth: .infinity)
@@ -368,7 +368,7 @@ struct PatternViewerView: View {
             YDIconView(icon: icon, size: 22)
         } else {
             Image(systemName: "eraser")
-                .font(.system(size: 19, weight: .bold))
+                .font(YDFont.symbol(size: 19, weight: .bold))
                 .frame(width: 22, height: 22)
         }
     }
@@ -377,16 +377,17 @@ struct PatternViewerView: View {
         VStack(spacing: 2) {
             HStack(spacing: YDSpacing.x2) {
                 Text("형광펜 팔레트")
-                    .font(.system(size: 12, weight: .bold))
+                    .font(YDFont.font(size: 12, weight: .bold))
                     .foregroundStyle(YDColor.muted)
                 Button {
                     undoLastHighlight()
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "arrow.uturn.backward")
+                            .font(YDFont.symbol(size: 12, weight: .bold))
                         Text("실행 취소")
                     }
-                    .font(.system(size: 12, weight: .bold))
+                    .font(YDFont.font(size: 12, weight: .bold))
                     .foregroundStyle(hasHighlightAnnotations ? YDColor.yarn4 : YDColor.muted)
                     .frame(minHeight: YDLayout.minimumTouchTarget)
                 }
@@ -407,9 +408,10 @@ struct PatternViewerView: View {
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "plus")
+                            .font(YDFont.symbol(size: 12, weight: .bold))
                         Text("즐겨찾기")
                     }
-                    .font(.system(size: 12, weight: .bold))
+                    .font(YDFont.font(size: 12, weight: .bold))
                     .foregroundStyle(YDColor.yarn4)
                     .frame(minHeight: YDLayout.minimumTouchTarget)
                 }
@@ -452,7 +454,7 @@ struct PatternViewerView: View {
                 .overlay(alignment: .topTrailing) {
                     if favoriteHighlightColors.contains(where: { $0.hex == ink.hex }) {
                         Image(systemName: "star.fill")
-                            .font(.system(size: 9))
+                            .font(YDFont.symbol(size: 9))
                             .foregroundStyle(YDColor.wood3)
                             .offset(x: 4, y: -4)
                     }
@@ -584,7 +586,7 @@ struct PatternViewerView: View {
     ) -> some View {
         Button(action: action) {
             Label(title, systemImage: systemImage)
-                .font(.system(size: 13, weight: .heavy))
+                .font(YDFont.font(size: 13, weight: .heavy))
                 .foregroundStyle(isEnabled ? YDColor.yarn4 : YDColor.muted)
                 .frame(maxWidth: .infinity)
                 .frame(minHeight: 48)
@@ -607,11 +609,11 @@ struct PatternViewerView: View {
         Button(action: action) {
             HStack {
                 Text(title)
-                    .font(.system(size: 14, weight: .heavy))
+                    .font(YDFont.font(size: 14, weight: .heavy))
                     .foregroundStyle(YDColor.ink)
                 Spacer()
                 Text(description)
-                    .font(.system(size: 12))
+                    .font(YDFont.font(size: 12))
                     .foregroundStyle(YDColor.muted)
                     .multilineTextAlignment(.trailing)
             }
@@ -1028,7 +1030,7 @@ private extension PatternAnnotationType {
 
 private extension View {
     func viewerGuideStyle() -> some View {
-        font(.system(size: 12, weight: .bold))
+        font(YDFont.font(size: 12, weight: .bold))
             .foregroundStyle(YDColor.ink)
             .padding(.horizontal, YDSpacing.x3)
             .padding(.vertical, YDSpacing.x2)
@@ -1077,10 +1079,10 @@ private struct DocumentLoadingView: View {
             ProgressView()
                 .tint(YDColor.yarn4)
             Text("도안을 여는 중입니다.")
-                .font(.system(size: 14, weight: .bold))
+                .font(YDFont.font(size: 14, weight: .bold))
                 .foregroundStyle(YDColor.ink)
             Text("저장된 페이지와 표시를 복원하고 있습니다.")
-                .font(.system(size: 12))
+                .font(YDFont.font(size: 12))
                 .foregroundStyle(YDColor.muted)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1094,10 +1096,10 @@ private struct MissingDocumentView: View {
             YDIconView(icon: .storage, size: 34)
                 .foregroundStyle(YDColor.wood3)
             Text("작업용 PDF를 열 수 없습니다.")
-                .font(.system(size: 15, weight: .bold))
+                .font(YDFont.font(size: 15, weight: .bold))
                 .foregroundStyle(YDColor.ink)
             Text("파일 누락 감지와 재연결은 남은 구현 항목입니다.")
-                .font(.system(size: 12))
+                .font(YDFont.font(size: 12))
                 .foregroundStyle(YDColor.muted)
         }
         .padding(YDSpacing.x6)
@@ -1124,7 +1126,7 @@ private struct SamplePatternPaper: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
                 Text("몸판 뜨기")
-                    .font(.system(size: 24, weight: .bold))
+                    .font(YDFont.font(size: 24, weight: .bold))
                     .foregroundStyle(YDColor.ink)
 
                 VStack(alignment: .leading, spacing: YDSpacing.x4) {
@@ -1135,14 +1137,14 @@ private struct SamplePatternPaper: View {
                             HStack(alignment: .top, spacing: 4) {
                                 if lines[index].checked && !isOriginalMode {
                                     Text("✓")
-                                        .fontWeight(.black)
+                                        .font(YDFont.font(size: 15, weight: .black))
                                         .foregroundStyle(YDColor.yarn4)
                                 }
                                 Text(lines[index].text)
                                     .foregroundStyle(Color(hex: 0x4F473B))
                                     .multilineTextAlignment(.leading)
                             }
-                            .font(.system(size: 15))
+                            .font(YDFont.font(size: 15))
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.vertical, 2)
                             .padding(.horizontal, 8)
@@ -1207,7 +1209,7 @@ private struct CurrentPatternSymbolsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: YDSpacing.x3) {
                     Text("\(patternTitle) 전용 기호를 먼저 표시합니다.")
-                        .font(.system(size: 13))
+                        .font(YDFont.font(size: 13))
                         .foregroundStyle(YDColor.yarn4)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(14)
@@ -1228,23 +1230,23 @@ private struct CurrentPatternSymbolsView: View {
     private func symbolRow(glyph: String, name: String, metadata: String) -> some View {
         HStack(spacing: 11) {
             Text(glyph)
-                .font(.system(size: 22, weight: .black))
+                .font(YDFont.font(size: 22, weight: .black))
                 .foregroundStyle(YDColor.yarn4)
                 .frame(width: 48, height: 48)
                 .background(YDColor.surfaceGreen)
                 .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
             VStack(alignment: .leading, spacing: 4) {
                 Text(name)
-                    .font(.system(size: 14, weight: .bold))
+                    .font(YDFont.font(size: 14, weight: .bold))
                     .foregroundStyle(YDColor.ink)
                 Text(metadata)
-                    .font(.system(size: 12))
+                    .font(YDFont.font(size: 12))
                     .foregroundStyle(YDColor.muted)
             }
             Spacer()
             Button("링크") {
             }
-            .font(.system(size: 12, weight: .heavy))
+            .font(YDFont.font(size: 12, weight: .heavy))
             .foregroundStyle(YDColor.wood3)
             .frame(minWidth: 44, minHeight: 38)
         }
