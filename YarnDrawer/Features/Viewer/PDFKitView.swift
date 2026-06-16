@@ -53,6 +53,15 @@ struct PDFKitView: UIViewRepresentable {
         placementGesture.cancelsTouchesInView = true
         view.addGestureRecognizer(placementGesture)
 
+        let selectionGesture = UILongPressGestureRecognizer(
+            target: context.coordinator,
+            action: #selector(Coordinator.handleSelectionGesture(_:))
+        )
+        selectionGesture.minimumPressDuration = 0.35
+        selectionGesture.cancelsTouchesInView = true
+        selectionGesture.delegate = context.coordinator
+        view.addGestureRecognizer(selectionGesture)
+
         let moveGesture = UIPanGestureRecognizer(
             target: context.coordinator,
             action: #selector(Coordinator.handleMoveGesture(_:))
@@ -66,6 +75,7 @@ struct PDFKitView: UIViewRepresentable {
         context.coordinator.pdfView = view
         context.coordinator.highlightGesture = highlightGesture
         context.coordinator.placementGesture = placementGesture
+        context.coordinator.selectionGesture = selectionGesture
         context.coordinator.moveGesture = moveGesture
         context.coordinator.startObservingPageChanges()
         return view
@@ -92,6 +102,10 @@ struct PDFKitView: UIViewRepresentable {
             annotationTool == .note ||
             annotationTool == .currentRow ||
             annotationTool == .eraser
+        context.coordinator.selectionGesture?.isEnabled =
+            annotationTool == .check ||
+            annotationTool == .note ||
+            annotationTool == .currentRow
         context.coordinator.moveGesture?.isEnabled =
             annotationTool == .check ||
             annotationTool == .note ||
@@ -108,6 +122,7 @@ struct PDFKitView: UIViewRepresentable {
         weak var pdfView: PDFView?
         weak var highlightGesture: UIPanGestureRecognizer?
         weak var placementGesture: UITapGestureRecognizer?
+        weak var selectionGesture: UILongPressGestureRecognizer?
         weak var moveGesture: UIPanGestureRecognizer?
 
         private var activePage: PDFPage?
@@ -117,7 +132,7 @@ struct PDFKitView: UIViewRepresentable {
         private var movingAnnotation: PatternAnnotation?
         private weak var movingPage: PDFPage?
         private var movingTouchOffset = CGPoint.zero
-        private var didMoveAnnotation = false
+        private var selectedAnnotationID: PatternAnnotation.ID?
         private var currentAnnotations: [PatternAnnotation]
         private var showsAnnotations: Bool
         private var visibleOverlays: [Int: HighlightPageOverlayView] = [:]
@@ -274,11 +289,17 @@ struct PDFKitView: UIViewRepresentable {
         ) {
             currentAnnotations = annotations
             self.showsAnnotations = showsAnnotations
+            if let selectedAnnotationID,
+               !annotations.contains(where: { $0.id == selectedAnnotationID })
+            {
+                self.selectedAnnotationID = nil
+            }
 
             for (pageIndex, overlay) in visibleOverlays {
                 overlay.annotations = showsAnnotations
                     ? annotations.filter { $0.pageIndex == pageIndex }
                     : []
+                overlay.selectedAnnotationID = self.selectedAnnotationID
             }
         }
 
@@ -299,6 +320,7 @@ struct PDFKitView: UIViewRepresentable {
             overlay.annotations = showsAnnotations
                 ? currentAnnotations.filter { $0.pageIndex == pageIndex }
                 : []
+            overlay.selectedAnnotationID = selectedAnnotationID
             visibleOverlays[pageIndex] = overlay
             return overlay
         }
@@ -338,6 +360,7 @@ struct PDFKitView: UIViewRepresentable {
                 return true
             }
             guard
+                let selectedAnnotationID,
                 let pdfView,
                 let document = pdfView.document,
                 let tool = parent.annotationTool,
@@ -353,15 +376,58 @@ struct PDFKitView: UIViewRepresentable {
                 return false
             }
             let pagePoint = pdfView.convert(location, to: page)
-            return existingMovableAnnotation(
+            return selectedMovableAnnotation(
+                id: selectedAnnotationID,
                 at: pagePoint,
                 on: page,
                 in: document
             ) != nil
         }
 
+        func gestureRecognizer(
+            _ gestureRecognizer: UIGestureRecognizer,
+            shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+        ) -> Bool {
+            (gestureRecognizer === selectionGesture && otherGestureRecognizer === moveGesture) ||
+            (gestureRecognizer === moveGesture && otherGestureRecognizer === selectionGesture)
+        }
+
+        @objc func handleSelectionGesture(_ gesture: UILongPressGestureRecognizer) {
+            guard
+                gesture.state == .began,
+                let pdfView,
+                let document = pdfView.document,
+                let tool = parent.annotationTool,
+                tool == .check || tool == .note || tool == .currentRow
+            else {
+                return
+            }
+
+            let location = gesture.location(in: pdfView)
+            guard
+                let page = pdfView.page(for: location, nearest: true),
+                document.index(for: page) >= 0
+            else {
+                return
+            }
+            let pagePoint = pdfView.convert(location, to: page)
+            guard
+                let annotation = existingMovableAnnotation(
+                    at: pagePoint,
+                    on: page,
+                    in: document
+                )
+            else {
+                clearSelectedAnnotation()
+                return
+            }
+            selectedAnnotationID = annotation.id
+            updateOverlay(for: annotation.pageIndex)
+        }
+
         @objc func handleMoveGesture(_ gesture: UIPanGestureRecognizer) {
             guard
+                let selectedAnnotationID,
                 let pdfView,
                 let document = pdfView.document,
                 let tool = parent.annotationTool,
@@ -386,6 +452,7 @@ struct PDFKitView: UIViewRepresentable {
             switch gesture.state {
             case .began:
                 beginMovingAnnotation(
+                    id: selectedAnnotationID,
                     at: pagePoint,
                     on: page,
                     in: document
@@ -439,6 +506,23 @@ struct PDFKitView: UIViewRepresentable {
             let pagePoint = pdfView.convert(location, to: page)
             let pageBounds = page.bounds(for: .cropBox)
             guard pageBounds.contains(pagePoint) else {
+                return
+            }
+
+            if let selectedAnnotationID {
+                if
+                    let selected = selectedMovableAnnotation(
+                        id: selectedAnnotationID,
+                        at: pagePoint,
+                        on: page,
+                        in: document
+                    ),
+                    selected.type == .note
+                {
+                    parent.onNoteRequested(selected)
+                    return
+                }
+                clearSelectedAnnotation()
                 return
             }
 
@@ -502,12 +586,14 @@ struct PDFKitView: UIViewRepresentable {
         }
 
         private func beginMovingAnnotation(
+            id: PatternAnnotation.ID,
             at pagePoint: CGPoint,
             on page: PDFPage,
             in document: PDFDocument
         ) {
             guard
-                let annotation = existingMovableAnnotation(
+                let annotation = selectedMovableAnnotation(
+                    id: id,
                     at: pagePoint,
                     on: page,
                     in: document
@@ -518,13 +604,13 @@ struct PDFKitView: UIViewRepresentable {
             }
             let pageBounds = page.bounds(for: .cropBox)
             let rect = annotation.bounds.rect(in: pageBounds)
+            selectedAnnotationID = annotation.id
             movingAnnotation = annotation
             movingPage = page
             movingTouchOffset = CGPoint(
                 x: pagePoint.x - rect.minX,
                 y: pagePoint.y - rect.minY
             )
-            didMoveAnnotation = false
         }
 
         private func updateMovingAnnotation(
@@ -550,7 +636,6 @@ struct PDFKitView: UIViewRepresentable {
                 return
             }
 
-            didMoveAnnotation = true
             currentAnnotations = currentAnnotations.map {
                 $0.id == moved.id ? moved : $0
             }
@@ -558,6 +643,8 @@ struct PDFKitView: UIViewRepresentable {
 
             if shouldSave {
                 clearMoveState()
+                selectedAnnotationID = moved.id
+                updateOverlay(for: moved.pageIndex)
                 parent.onAnnotationMoved(moved)
             }
         }
@@ -630,7 +717,23 @@ struct PDFKitView: UIViewRepresentable {
             movingAnnotation = nil
             movingPage = nil
             movingTouchOffset = .zero
-            didMoveAnnotation = false
+        }
+
+        private func clearSelectedAnnotation() {
+            let previousID = selectedAnnotationID
+            selectedAnnotationID = nil
+            guard
+                let previousID,
+                let previousPageIndex = currentAnnotations.first(
+                    where: { $0.id == previousID }
+                )?.pageIndex
+            else {
+                for pageIndex in visibleOverlays.keys {
+                    updateOverlay(for: pageIndex)
+                }
+                return
+            }
+            updateOverlay(for: previousPageIndex)
         }
 
         private func updateOverlay(for pageIndex: Int) {
@@ -640,6 +743,7 @@ struct PDFKitView: UIViewRepresentable {
             overlay.annotations = showsAnnotations
                 ? currentAnnotations.filter { $0.pageIndex == pageIndex }
                 : []
+            overlay.selectedAnnotationID = selectedAnnotationID
         }
 
         private func existingNoteAnnotation(
@@ -674,6 +778,26 @@ struct PDFKitView: UIViewRepresentable {
                 }
                 .reversed()
                 .first {
+                    $0.bounds
+                        .rect(in: pageBounds)
+                        .insetBy(dx: -12, dy: -12)
+                        .contains(pagePoint)
+                }
+        }
+
+        private func selectedMovableAnnotation(
+            id: PatternAnnotation.ID,
+            at pagePoint: CGPoint,
+            on page: PDFPage,
+            in document: PDFDocument
+        ) -> PatternAnnotation? {
+            let pageIndex = document.index(for: page)
+            let pageBounds = page.bounds(for: .cropBox)
+            return currentAnnotations
+                .first {
+                    $0.id == id &&
+                    $0.pageIndex == pageIndex &&
+                    ($0.type == .check || $0.type == .note || $0.type == .currentRow) &&
                     $0.bounds
                         .rect(in: pageBounds)
                         .insetBy(dx: -12, dy: -12)
@@ -1048,6 +1172,11 @@ private final class HighlightPageOverlayView: UIView {
             setNeedsDisplay()
         }
     }
+    var selectedAnnotationID: PatternAnnotation.ID? {
+        didSet {
+            setNeedsDisplay()
+        }
+    }
 
     override func draw(_ rect: CGRect) {
         guard let context = UIGraphicsGetCurrentContext() else {
@@ -1057,6 +1186,9 @@ private final class HighlightPageOverlayView: UIView {
         context.saveGState()
         context.setBlendMode(.normal)
         for annotation in annotations {
+            if annotation.id == selectedAnnotationID {
+                drawSelection(for: annotation, in: context)
+            }
             switch annotation.type {
             case .highlight where annotation.isFreehandHighlight:
                 let color = UIColor(highlightHex: annotation.resolvedHighlightHex)
@@ -1092,6 +1224,46 @@ private final class HighlightPageOverlayView: UIView {
                 context.fill(annotation.fixedCurrentRowRect(in: bounds))
             }
         }
+        context.restoreGState()
+    }
+
+    private func drawSelection(
+        for annotation: PatternAnnotation,
+        in context: CGContext
+    ) {
+        let selectionRect: CGRect
+        switch annotation.type {
+        case .check:
+            selectionRect = annotation.fixedCheckRect(
+                in: bounds,
+                size: AnnotationDrawing.checkSize
+            ).insetBy(dx: -6, dy: -6)
+        case .note:
+            selectionRect = annotation.fixedCheckRect(
+                in: bounds,
+                size: AnnotationDrawing.noteSize
+            ).insetBy(dx: -6, dy: -6)
+        case .currentRow:
+            selectionRect = annotation.fixedCurrentRowRect(in: bounds)
+                .insetBy(dx: 5, dy: -5)
+        case .highlight:
+            return
+        }
+
+        context.saveGState()
+        let fillColor: UIColor = switch annotation.type {
+        case .currentRow:
+            UIColor(YDColor.yarn1.opacity(0.16))
+        default:
+            UIColor(YDColor.wood1.opacity(0.24))
+        }
+        context.setFillColor(fillColor.cgColor)
+        let path = UIBezierPath(
+            roundedRect: selectionRect,
+            cornerRadius: min(12, selectionRect.height / 2)
+        )
+        context.addPath(path.cgPath)
+        context.fillPath()
         context.restoreGState()
     }
 

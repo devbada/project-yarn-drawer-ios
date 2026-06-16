@@ -31,6 +31,7 @@ enum PatternImportError: LocalizedError {
 
 actor FileAssetStore {
     private let fileManager: FileManager
+    private let appRootURL: URL
     private let patternsRootURL: URL
 
     init(fileManager: FileManager = .default) {
@@ -39,9 +40,11 @@ actor FileAssetStore {
             for: .applicationSupportDirectory,
             in: .userDomainMask
         )[0]
-        patternsRootURL = applicationSupport
-            .appending(path: "YarnDrawer", directoryHint: .isDirectory)
-            .appending(path: "patterns", directoryHint: .isDirectory)
+        appRootURL = applicationSupport.appending(
+            path: "YarnDrawer",
+            directoryHint: .isDirectory
+        )
+        patternsRootURL = appRootURL.appending(path: "patterns", directoryHint: .isDirectory)
     }
 
     func importPattern(_ draft: PatternImportDraft) throws -> PatternItem {
@@ -165,6 +168,58 @@ actor FileAssetStore {
             return
         }
         try fileManager.removeItem(at: patternDirectory)
+    }
+
+    func appDataByteSize() -> Int64 {
+        guard fileManager.fileExists(atPath: appRootURL.path) else {
+            return 0
+        }
+        guard let enumerator = fileManager.enumerator(
+            at: appRootURL,
+            includingPropertiesForKeys: [.fileSizeKey, .isRegularFileKey]
+        ) else {
+            return 0
+        }
+        var total: Int64 = 0
+        for case let url as URL in enumerator {
+            guard
+                let values = try? url.resourceValues(
+                    forKeys: [.fileSizeKey, .isRegularFileKey]
+                ),
+                values.isRegularFile == true
+            else {
+                continue
+            }
+            total += Int64(values.fileSize ?? 0)
+        }
+        return total
+    }
+
+    func deleteAllAppData() throws {
+        guard fileManager.fileExists(atPath: appRootURL.path) else {
+            return
+        }
+        try fileManager.removeItem(at: appRootURL)
+    }
+
+    func missingFilePatternIDs(for patterns: [PatternItem]) -> Set<PatternItem.ID> {
+        Set(
+            patterns.compactMap { pattern in
+                guard !pattern.isSample else {
+                    return nil
+                }
+                let assets = [pattern.originalAsset, pattern.viewAsset].compactMap(\.self)
+                guard !assets.isEmpty else {
+                    return pattern.id
+                }
+                let hasMissingFile = assets.contains {
+                    !fileManager.fileExists(
+                        atPath: fileURL(for: $0, patternID: pattern.id).path
+                    )
+                }
+                return hasMissingFile ? pattern.id : nil
+            }
+        )
     }
 
     private func resolveFileType(_ url: URL) throws -> SourceFileType {

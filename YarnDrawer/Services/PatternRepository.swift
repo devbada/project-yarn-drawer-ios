@@ -5,6 +5,7 @@ actor PatternRepository {
     private let rootURL: URL
     private let metadataURL: URL
     private let backupURL: URL
+    private let hiddenSamplesURL: URL
 
     init(
         fileManager: FileManager = .default,
@@ -22,6 +23,7 @@ actor PatternRepository {
         self.rootURL = resolvedRootURL
         metadataURL = resolvedRootURL.appending(path: "patterns.json")
         backupURL = resolvedRootURL.appending(path: "patterns.backup.json")
+        hiddenSamplesURL = resolvedRootURL.appending(path: "hidden-samples.json")
     }
 
     func load() throws -> [PatternItem] {
@@ -58,6 +60,31 @@ actor PatternRepository {
         )
         try write(persistedPatterns, to: metadataURL)
         try write(persistedPatterns, to: backupURL)
+    }
+
+    func hiddenSampleIDs() throws -> Set<PatternItem.ID> {
+        guard fileManager.fileExists(atPath: hiddenSamplesURL.path) else {
+            return []
+        }
+        let ids = try decoder.decode(
+            [PatternItem.ID].self,
+            from: Data(contentsOf: hiddenSamplesURL)
+        )
+        return Set(ids)
+    }
+
+    func hideSample(id: PatternItem.ID) throws {
+        var ids = try hiddenSampleIDs()
+        ids.insert(id)
+        try fileManager.createDirectory(
+            at: rootURL,
+            withIntermediateDirectories: true
+        )
+        let data = try encoder.encode(Array(ids).sorted { $0.uuidString < $1.uuidString })
+        try data.write(
+            to: hiddenSamplesURL,
+            options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication]
+        )
     }
 
     private func loadBackupIfAvailable(

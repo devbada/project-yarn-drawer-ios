@@ -67,8 +67,14 @@ struct PatternViewerView: View {
     @State private var editingNote: PatternAnnotation?
     @State private var noteText = ""
     @State private var showsNoteEditor = false
+    @State private var undoStack: [[PatternAnnotation]] = []
+    @State private var redoStack: [[PatternAnnotation]] = []
     @State private var selectedHighlightHex = HighlightInk.presets[0].hex
     @State private var customHighlightColor = Color(hex: 0xF9A8D4)
+    @AppStorage("viewerSelectedTool")
+    private var storedSelectedTool = PatternTool.check.rawValue
+    @AppStorage("viewerSelectedHighlightHex")
+    private var storedSelectedHighlightHex = HighlightInk.presets[0].hex
     @AppStorage("highlightFavoriteHexes")
     private var highlightFavoriteHexes = ""
 
@@ -121,6 +127,15 @@ struct PatternViewerView: View {
                 }
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
+        }
+        .onAppear {
+            restoreViewerToolPreferences()
+        }
+        .onChange(of: selectedTool) { _, tool in
+            storedSelectedTool = tool.rawValue
+        }
+        .onChange(of: selectedHighlightHex) { _, hex in
+            storedSelectedHighlightHex = hex
         }
         .task {
             isDocumentLoading = !pattern.isSample
@@ -257,16 +272,16 @@ struct PatternViewerView: View {
                             .clipShape(Capsule())
                             .padding(.top, YDSpacing.x3)
                     } else if selectedTool == .check {
-                        Text("완료한 위치를 눌러 체크하세요.")
+                        Text("탭: 체크 · 길게 누름: 선택 후 이동")
                             .viewerGuideStyle()
                     } else if selectedTool == .eraser {
                         Text("지울 표시를 누르세요.")
                             .viewerGuideStyle()
                     } else if selectedTool == .note {
-                        Text("메모를 남길 위치를 누르세요.")
+                        Text("탭: 메모 · 길게 누름: 선택 후 이동")
                             .viewerGuideStyle()
                     } else if selectedTool == .currentRow {
-                        Text("현재 작업 중인 줄을 누르세요.")
+                        Text("탭: 현재 줄 · 길게 누름: 선택 후 이동")
                             .viewerGuideStyle()
                     }
                 }
@@ -512,6 +527,20 @@ struct PatternViewerView: View {
     private var viewerToolsSheet: some View {
         NavigationStack {
             VStack(spacing: 9) {
+                HStack(spacing: YDSpacing.x2) {
+                    historyButton(
+                        title: "실행 취소",
+                        systemImage: "arrow.uturn.backward",
+                        isEnabled: !undoStack.isEmpty,
+                        action: undoAnnotationChange
+                    )
+                    historyButton(
+                        title: "다시 실행",
+                        systemImage: "arrow.uturn.forward",
+                        isEnabled: !redoStack.isEmpty,
+                        action: redoAnnotationChange
+                    )
+                }
                 sheetAction(
                     title: isOriginalMode ? "편집본으로 돌아가기" : "원본 보기",
                     description: isOriginalMode
@@ -540,6 +569,29 @@ struct PatternViewerView: View {
             .navigationTitle("도안 도구")
             .navigationBarTitleDisplayMode(.inline)
         }
+    }
+
+    private func historyButton(
+        title: String,
+        systemImage: String,
+        isEnabled: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: systemImage)
+                .font(.system(size: 13, weight: .heavy))
+                .foregroundStyle(isEnabled ? YDColor.yarn4 : YDColor.muted)
+                .frame(maxWidth: .infinity)
+                .frame(minHeight: 48)
+                .background(isEnabled ? YDColor.surfaceGreen : YDColor.cream2)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(YDColor.line, lineWidth: 1)
+                }
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
     }
 
     private func sheetAction(
@@ -675,7 +727,56 @@ struct PatternViewerView: View {
         protectedAction = nil
     }
 
+    private func restoreViewerToolPreferences() {
+        selectedTool = PatternTool(rawValue: storedSelectedTool) ?? .check
+        let hex = String(storedSelectedHighlightHex.filter(\.isHexDigit).prefix(6)).uppercased()
+        guard hex.count == 6 else {
+            return
+        }
+        selectedHighlightHex = hex
+        customHighlightColor = Color(highlightHex: hex)
+    }
+
+    private func recordAnnotationHistory() {
+        undoStack.append(annotations)
+        if undoStack.count > 50 {
+            undoStack.removeFirst()
+        }
+        redoStack.removeAll()
+    }
+
+    private func undoAnnotationChange() {
+        guard let previousAnnotations = undoStack.popLast() else {
+            showToast("되돌릴 작업이 없습니다.")
+            return
+        }
+        redoStack.append(annotations)
+        annotations = previousAnnotations
+        saveAnnotationSnapshot(
+            successMessage: "이전 작업으로 되돌렸습니다.",
+            failureMessage: "실행 취소를 저장하지 못했습니다.",
+            startedMessage: "실행 취소를 저장합니다.",
+            updatesProgress: true
+        )
+    }
+
+    private func redoAnnotationChange() {
+        guard let nextAnnotations = redoStack.popLast() else {
+            showToast("다시 실행할 작업이 없습니다.")
+            return
+        }
+        undoStack.append(annotations)
+        annotations = nextAnnotations
+        saveAnnotationSnapshot(
+            successMessage: "작업을 다시 실행했습니다.",
+            failureMessage: "다시 실행을 저장하지 못했습니다.",
+            startedMessage: "다시 실행을 저장합니다.",
+            updatesProgress: true
+        )
+    }
+
     private func addAnnotation(_ annotation: PatternAnnotation) {
+        recordAnnotationHistory()
         if annotation.type == .currentRow {
             annotations.removeAll { $0.type == .currentRow }
         }
@@ -713,6 +814,7 @@ struct PatternViewerView: View {
         _ annotation: PatternAnnotation,
         successMessage: String? = nil
     ) {
+        recordAnnotationHistory()
         annotations.removeAll { $0.id == annotation.id }
         isDirty = true
         annotationSaveFailed = false
@@ -743,6 +845,7 @@ struct PatternViewerView: View {
         guard let index = annotations.firstIndex(where: { $0.id == annotation.id }) else {
             return
         }
+        recordAnnotationHistory()
         annotations[index] = annotation
         isDirty = true
         annotationSaveFailed = false
@@ -797,6 +900,7 @@ struct PatternViewerView: View {
             return
         }
 
+        recordAnnotationHistory()
         note.noteText = trimmedText
         if let index = annotations.firstIndex(where: { $0.id == note.id }) {
             annotations[index] = note
@@ -806,7 +910,8 @@ struct PatternViewerView: View {
         clearEditingNote()
         saveAnnotationSnapshot(
             successMessage: "메모를 저장했습니다.",
-            failureMessage: "메모를 저장하지 못했습니다."
+            failureMessage: "메모를 저장하지 못했습니다.",
+            startedMessage: "메모를 자동 저장합니다."
         )
     }
 
@@ -820,16 +925,21 @@ struct PatternViewerView: View {
 
     private func saveAnnotationSnapshot(
         successMessage: String,
-        failureMessage: String
+        failureMessage: String,
+        startedMessage: String,
+        updatesProgress: Bool = false
     ) {
         isDirty = true
         annotationSaveFailed = false
         pendingAnnotationSaveCount += 1
-        showToast("메모를 자동 저장합니다.")
+        showToast(startedMessage)
 
         Task {
             do {
                 try await store.saveAnnotations(annotations, for: pattern.id)
+                if updatesProgress {
+                    try await store.updateProgress(latestCheckProgress ?? 0, for: pattern.id)
+                }
                 pendingAnnotationSaveCount = max(0, pendingAnnotationSaveCount - 1)
                 if pendingAnnotationSaveCount == 0 {
                     isDirty = false

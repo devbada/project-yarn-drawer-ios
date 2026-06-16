@@ -2,7 +2,7 @@ import Foundation
 
 enum PatternStoreError: LocalizedError {
     case patternNotFound
-    case sampleIsReadOnly
+    case sampleEditNotAllowed
     case invalidTitle
     case invalidDesignerName
 
@@ -10,8 +10,8 @@ enum PatternStoreError: LocalizedError {
         switch self {
         case .patternNotFound:
             "도안 정보를 찾지 못했습니다."
-        case .sampleIsReadOnly:
-            "샘플 도안은 수정하거나 삭제할 수 없습니다."
+        case .sampleEditNotAllowed:
+            "샘플 도안은 수정할 수 없습니다."
         case .invalidTitle:
             "도안명은 1자 이상 100자 이하로 입력해 주세요."
         case .invalidDesignerName:
@@ -23,6 +23,7 @@ enum PatternStoreError: LocalizedError {
 @MainActor
 final class PatternStore: ObservableObject {
     @Published private(set) var patterns: [PatternItem] = PatternItem.samples
+    @Published private(set) var missingFilePatternIDs: Set<PatternItem.ID> = []
     @Published var selectedPattern: PatternItem?
     @Published var isImporting = false
     @Published var importErrorMessage: String?
@@ -47,7 +48,12 @@ final class PatternStore: ObservableObject {
     func load() async {
         do {
             let persistedPatterns = try await repository.load()
-            patterns = PatternItem.samples + persistedPatterns
+            let hiddenSampleIDs = (try? await repository.hiddenSampleIDs()) ?? []
+            let visibleSamples = PatternItem.samples.filter {
+                !hiddenSampleIDs.contains($0.id)
+            }
+            patterns = visibleSamples + persistedPatterns
+            await refreshMissingFileStatus()
         } catch {
             importErrorMessage = "저장된 도안 정보를 불러오지 못했습니다."
         }
@@ -67,6 +73,7 @@ final class PatternStore: ObservableObject {
             pattern.lastOpenedAt = Date()
             patterns.append(pattern)
             try await persist()
+            await refreshMissingFileStatus()
             selectedPattern = pattern
             return true
         } catch {
@@ -112,7 +119,7 @@ final class PatternStore: ObservableObject {
             throw PatternStoreError.patternNotFound
         }
         guard !patterns[index].isSample else {
-            throw PatternStoreError.sampleIsReadOnly
+            throw PatternStoreError.sampleEditNotAllowed
         }
 
         let title = pattern.title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -158,13 +165,23 @@ final class PatternStore: ObservableObject {
         guard let pattern = pattern(id: id) else {
             throw PatternStoreError.patternNotFound
         }
-        guard !pattern.isSample else {
-            throw PatternStoreError.sampleIsReadOnly
+
+        if pattern.isSample {
+            try await repository.hideSample(id: id)
+            patterns.removeAll { $0.id == id }
+            await refreshMissingFileStatus()
+            if selectedPattern?.id == id {
+                selectedPattern = nil
+            }
+            try? await annotationRepository.delete(patternID: id)
+            try? await viewerStateRepository.delete(patternID: id)
+            return
         }
 
         let remainingPatterns = patterns.filter { $0.id != id }
         try await repository.saveAfterDeletion(remainingPatterns)
         patterns = remainingPatterns
+        await refreshMissingFileStatus()
 
         if selectedPattern?.id == id {
             selectedPattern = nil
@@ -173,6 +190,18 @@ final class PatternStore: ObservableObject {
         try? await fileAssetStore.deletePatternFiles(patternID: id)
         try? await annotationRepository.delete(patternID: id)
         try? await viewerStateRepository.delete(patternID: id)
+    }
+
+    func localStorageByteSize() async -> Int64 {
+        await fileAssetStore.appDataByteSize()
+    }
+
+    func deleteAllLocalData() async throws {
+        try await fileAssetStore.deleteAllAppData()
+        patterns = PatternItem.samples
+        missingFilePatternIDs = []
+        selectedPattern = nil
+        importErrorMessage = nil
     }
 
     func viewURL(for pattern: PatternItem) async -> URL? {
@@ -228,5 +257,9 @@ final class PatternStore: ObservableObject {
 
     private func persist() async throws {
         try await repository.save(patterns)
+    }
+
+    private func refreshMissingFileStatus() async {
+        missingFilePatternIDs = await fileAssetStore.missingFilePatternIDs(for: patterns)
     }
 }

@@ -149,22 +149,20 @@ struct PatternDetailsView: View {
                                 )
                         }
 
-                        if !pattern.isSample {
-                            Button("도안 삭제", role: .destructive) {
-                                showsDeleteConfirmation = true
-                            }
-                            .font(.system(size: 14, weight: .heavy))
-                            .foregroundStyle(YDColor.danger)
-                            .frame(maxWidth: .infinity)
-                            .frame(minHeight: 48)
-                            .background(YDColor.danger.opacity(0.08))
-                            .clipShape(
-                                RoundedRectangle(
-                                    cornerRadius: 14,
-                                    style: .continuous
-                                )
-                            )
+                        Button(pattern.isSample ? "샘플 도안 삭제" : "도안 삭제", role: .destructive) {
+                            showsDeleteConfirmation = true
                         }
+                        .font(.system(size: 14, weight: .heavy))
+                        .foregroundStyle(YDColor.danger)
+                        .frame(maxWidth: .infinity)
+                        .frame(minHeight: 48)
+                        .background(YDColor.danger.opacity(0.08))
+                        .clipShape(
+                            RoundedRectangle(
+                                cornerRadius: 14,
+                                style: .continuous
+                            )
+                        )
                     } else {
                         Text("도안 정보를 찾지 못했습니다.")
                             .foregroundStyle(YDColor.muted)
@@ -196,13 +194,13 @@ struct PatternDetailsView: View {
         .task {
             loadPatternIfNeeded()
         }
-        .alert("도안을 삭제할까요?", isPresented: $showsDeleteConfirmation) {
+        .alert(deleteTitle, isPresented: $showsDeleteConfirmation) {
             Button("취소", role: .cancel) {}
             Button("삭제", role: .destructive) {
                 deletePattern()
             }
         } message: {
-            Text("원본 파일, 작업용 PDF, 표시와 마지막 페이지 정보도 함께 삭제됩니다.")
+            Text(deleteMessage)
         }
     }
 
@@ -211,13 +209,24 @@ struct PatternDetailsView: View {
     }
 
     private var readOnlyNotice: some View {
-        Text("샘플 도안은 내용을 확인할 수 있지만 수정하거나 삭제할 수 없습니다.")
+        Text("샘플 도안은 수정할 수 없지만 보관함에서 삭제할 수 있습니다.")
             .font(.system(size: 13, weight: .bold))
             .foregroundStyle(YDColor.wood3)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
             .background(YDColor.wood1.opacity(0.18))
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    private var deleteTitle: String {
+        pattern?.isSample == true ? "샘플 도안을 삭제할까요?" : "도안을 삭제할까요?"
+    }
+
+    private var deleteMessage: String {
+        if pattern?.isSample == true {
+            return "샘플 도안이 보관함에서 숨겨집니다. 직접 등록한 도안에는 영향 없습니다."
+        }
+        return "원본 파일, 작업용 PDF, 표시와 마지막 페이지 정보도 함께 삭제됩니다."
     }
 
     private func section<Content: View>(

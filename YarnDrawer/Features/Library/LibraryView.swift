@@ -85,12 +85,17 @@ struct LibraryView: View {
                 }
 
                 if filteredPatterns.isEmpty {
-                    EmptyLibraryState()
+                    EmptyLibraryState(
+                        isLibraryEmpty: store.patterns.isEmpty,
+                        hasQuery: !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                        filterTitle: filter.title
+                    )
                 } else {
                     LazyVGrid(columns: columns, spacing: 13) {
                         ForEach(filteredPatterns) { pattern in
                             PatternCardView(
                                 pattern: pattern,
+                                isFileMissing: store.missingFilePatternIDs.contains(pattern.id),
                                 onOpen: { store.openPattern(pattern.id) },
                                 onToggleFavorite: { store.toggleFavorite(pattern.id) },
                                 onShowDetails: { detailPattern = pattern }
@@ -152,14 +157,22 @@ struct LibraryView: View {
 }
 
 private struct EmptyLibraryState: View {
+    let isLibraryEmpty: Bool
+    let hasQuery: Bool
+    let filterTitle: String
+
     var body: some View {
         VStack(spacing: YDSpacing.x2) {
-            Text("조건에 맞는 도안이 없습니다.")
+            YDIconView(icon: isLibraryEmpty ? .library : .search, size: 30)
+                .foregroundStyle(YDColor.wood3)
+                .padding(.bottom, YDSpacing.x1)
+            Text(title)
                 .font(.system(size: 16, weight: .bold))
                 .foregroundStyle(YDColor.ink)
-            Text("검색어를 지우거나 다른 필터를 선택해 주세요.")
+            Text(description)
                 .font(.system(size: 13))
                 .foregroundStyle(YDColor.muted)
+                .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 34)
@@ -169,5 +182,19 @@ private struct EmptyLibraryState: View {
             RoundedRectangle(cornerRadius: YDRadius.medium, style: .continuous)
                 .stroke(YDColor.line, style: StrokeStyle(lineWidth: 1, dash: [6]))
         }
+    }
+
+    private var title: String {
+        if isLibraryEmpty {
+            return "보관함이 비어 있습니다."
+        }
+        return hasQuery ? "검색 결과가 없습니다." : "\(filterTitle) 도안이 없습니다."
+    }
+
+    private var description: String {
+        if isLibraryEmpty {
+            return "상단의 도안 등록 버튼으로 PDF나 이미지를 추가해 주세요."
+        }
+        return "검색어를 지우거나 다른 필터를 선택해 주세요."
     }
 }

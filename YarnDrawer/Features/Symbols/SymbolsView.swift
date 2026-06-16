@@ -5,17 +5,39 @@ private struct KnitSymbol: Identifiable {
     let glyph: String
     let name: String
     let metadata: String
+    let linkURL: URL
+
+    var linkDomain: String {
+        linkURL.host() ?? linkURL.host ?? "외부 사이트"
+    }
 }
 
 struct SymbolsView: View {
+    @Environment(\.openURL) private var openURL
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var query = ""
     @State private var toastMessage: String?
+    @State private var pendingLinkSymbol: KnitSymbol?
 
     private let symbols = [
-        KnitSymbol(glyph: "○", name: "바늘비우기", metadata: "yo · yarn over"),
-        KnitSymbol(glyph: "＼", name: "왼 코 늘리기", metadata: "m1l · 왼쪽 기울임"),
-        KnitSymbol(glyph: "DS", name: "더블 스티치", metadata: "German short row")
+        KnitSymbol(
+            glyph: "○",
+            name: "바늘비우기",
+            metadata: "yo · yarn over",
+            linkURL: URL(string: "https://en.wikipedia.org/wiki/Yarn_over")!
+        ),
+        KnitSymbol(
+            glyph: "＼",
+            name: "왼 코 늘리기",
+            metadata: "m1l · 왼쪽 기울임",
+            linkURL: URL(string: "https://en.wikipedia.org/wiki/List_of_knitting_stitches")!
+        ),
+        KnitSymbol(
+            glyph: "DS",
+            name: "더블 스티치",
+            metadata: "German short row",
+            linkURL: URL(string: "https://en.wikipedia.org/wiki/Short_row_(knitting)")!
+        )
     ]
 
     private var filteredSymbols: [KnitSymbol] {
@@ -90,6 +112,31 @@ struct SymbolsView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
+        .confirmationDialog(
+            "외부 링크 열기",
+            isPresented: Binding(
+                get: { pendingLinkSymbol != nil },
+                set: { isPresented in
+                    if !isPresented {
+                        pendingLinkSymbol = nil
+                    }
+                }
+            ),
+            titleVisibility: .visible
+        ) {
+            if let pendingLinkSymbol {
+                Button("\(pendingLinkSymbol.linkDomain) 열기") {
+                    openURL(pendingLinkSymbol.linkURL)
+                    showToast("\(pendingLinkSymbol.linkDomain)을 열었습니다.")
+                    self.pendingLinkSymbol = nil
+                }
+            }
+            Button("취소", role: .cancel) {}
+        } message: {
+            if let pendingLinkSymbol {
+                Text("\(pendingLinkSymbol.name) 설명을 시스템 브라우저에서 엽니다.")
+            }
+        }
     }
 
     private func symbolCard(_ symbol: KnitSymbol) -> some View {
@@ -111,7 +158,7 @@ struct SymbolsView: View {
             }
             Spacer()
             Button("링크") {
-                showToast("외부 링크 목적지 확인 후 시스템 브라우저에서 엽니다.")
+                pendingLinkSymbol = symbol
             }
             .font(.system(size: 12, weight: .heavy))
             .foregroundStyle(YDColor.wood3)
@@ -142,4 +189,3 @@ struct SymbolsView: View {
         }
     }
 }
-

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct PatternCardView: View {
     let pattern: PatternItem
+    var isFileMissing = false
     let onOpen: () -> Void
     let onToggleFavorite: () -> Void
     let onShowDetails: () -> Void
@@ -29,6 +30,17 @@ struct PatternCardView: View {
                             .foregroundStyle(YDColor.muted)
                             .lineLimit(1)
                             .padding(.top, 6)
+
+                        if isFileMissing {
+                            Text("파일 누락")
+                                .font(.system(size: 11, weight: .heavy))
+                                .foregroundStyle(YDColor.danger)
+                                .padding(.horizontal, 8)
+                                .frame(minHeight: 24)
+                                .background(YDColor.danger.opacity(0.08))
+                                .clipShape(Capsule())
+                                .padding(.top, 8)
+                        }
 
                         HStack(spacing: 5) {
                             ForEach(pattern.tags.prefix(3), id: \.self) { tag in
