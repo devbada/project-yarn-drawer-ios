@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct PatternDetailsView: View {
     @EnvironmentObject private var store: PatternStore
@@ -19,8 +20,10 @@ struct PatternDetailsView: View {
     @State private var needleSize = ""
     @State private var hookSize = ""
     @State private var notes = ""
+    @State private var progress = 0.0
     @State private var errorMessage: String?
     @State private var showsDeleteConfirmation = false
+    @State private var showsReconnectPicker = false
     @State private var isSaving = false
     @State private var didLoad = false
 
@@ -74,6 +77,43 @@ struct PatternDetailsView: View {
                             }
                         }
 
+                        section("진행률") {
+                            VStack(alignment: .leading, spacing: YDSpacing.x3) {
+                                HStack {
+                                    Text(progress >= 1 ? "완료" : "\(Int(progress * 100))%")
+                                        .font(YDFont.font(size: 22, weight: .heavy))
+                                        .foregroundStyle(YDColor.yarn4)
+                                    Spacer()
+                                    Text("카드 진행 막대에 반영")
+                                        .font(YDFont.font(size: 12, weight: .bold))
+                                        .foregroundStyle(YDColor.muted)
+                                }
+
+                                Slider(value: $progress, in: 0...1, step: 0.01)
+                                    .tint(YDColor.yarn4)
+                                    .accessibilityLabel("진행률")
+                                    .accessibilityValue("\(Int(progress * 100))%")
+
+                                HStack(spacing: YDSpacing.x2) {
+                                    ForEach([0.0, 0.25, 0.5, 0.75, 1.0], id: \.self) { value in
+                                        Button(value >= 1 ? "완료" : "\(Int(value * 100))%") {
+                                            progress = value
+                                        }
+                                        .font(YDFont.font(size: 12, weight: .bold))
+                                        .foregroundStyle(progress == value ? YDColor.cream0 : YDColor.muted)
+                                        .frame(maxWidth: .infinity)
+                                        .frame(minHeight: 34)
+                                        .background(progress == value ? YDColor.ink : YDColor.cream0)
+                                        .clipShape(Capsule())
+                                        .overlay {
+                                            Capsule()
+                                                .stroke(YDColor.line, lineWidth: 1)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         section("메모") {
                             TextField("도안에 관한 메모", text: $notes, axis: .vertical)
                                 .lineLimit(4...8)
@@ -98,7 +138,7 @@ struct PatternDetailsView: View {
 
                         if let errorMessage {
                             Text(errorMessage)
-                                .font(.system(size: 13))
+                                .font(YDFont.font(size: 13))
                                 .foregroundStyle(YDColor.danger)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(14)
@@ -111,22 +151,20 @@ struct PatternDetailsView: View {
                                 )
                         }
 
-                        if !pattern.isSample {
-                            Button("도안 삭제", role: .destructive) {
-                                showsDeleteConfirmation = true
-                            }
-                            .font(.system(size: 14, weight: .heavy))
-                            .foregroundStyle(YDColor.danger)
-                            .frame(maxWidth: .infinity)
-                            .frame(minHeight: 48)
-                            .background(YDColor.danger.opacity(0.08))
-                            .clipShape(
-                                RoundedRectangle(
-                                    cornerRadius: 14,
-                                    style: .continuous
-                                )
-                            )
+                        Button(pattern.isSample ? "샘플 도안 삭제" : "도안 삭제", role: .destructive) {
+                            showsDeleteConfirmation = true
                         }
+                        .font(YDFont.font(size: 14, weight: .heavy))
+                        .foregroundStyle(YDColor.danger)
+                        .frame(maxWidth: .infinity)
+                        .frame(minHeight: 48)
+                        .background(YDColor.danger.opacity(0.08))
+                        .clipShape(
+                            RoundedRectangle(
+                                cornerRadius: 14,
+                                style: .continuous
+                            )
+                        )
                     } else {
                         Text("도안 정보를 찾지 못했습니다.")
                             .foregroundStyle(YDColor.muted)
@@ -149,7 +187,7 @@ struct PatternDetailsView: View {
                     Button(isSaving ? "저장 중" : "저장") {
                         save()
                     }
-                    .fontWeight(.bold)
+                    .font(YDFont.font(size: 17, weight: .bold))
                     .foregroundStyle(YDColor.yarn4)
                     .disabled(pattern?.isSample != false || isSaving)
                 }
@@ -158,13 +196,22 @@ struct PatternDetailsView: View {
         .task {
             loadPatternIfNeeded()
         }
-        .alert("도안을 삭제할까요?", isPresented: $showsDeleteConfirmation) {
+        .alert(deleteTitle, isPresented: $showsDeleteConfirmation) {
             Button("취소", role: .cancel) {}
             Button("삭제", role: .destructive) {
                 deletePattern()
             }
         } message: {
-            Text("원본 파일, 작업용 PDF, 표시와 마지막 페이지 정보도 함께 삭제됩니다.")
+            Text(deleteMessage)
+        }
+        .sheet(isPresented: $showsReconnectPicker) {
+            PatternReconnectDocumentPicker(
+                allowedContentTypes: [.pdf, .jpeg, .png],
+                onPick: reconnectFile,
+                onFailure: {
+                    errorMessage = "파일을 다시 선택하지 못했습니다."
+                }
+            )
         }
     }
 
@@ -173,13 +220,24 @@ struct PatternDetailsView: View {
     }
 
     private var readOnlyNotice: some View {
-        Text("샘플 도안은 내용을 확인할 수 있지만 수정하거나 삭제할 수 없습니다.")
-            .font(.system(size: 13, weight: .bold))
+        Text("샘플 도안은 수정할 수 없지만 보관함에서 삭제할 수 있습니다.")
+            .font(YDFont.font(size: 13, weight: .bold))
             .foregroundStyle(YDColor.wood3)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
             .background(YDColor.wood1.opacity(0.18))
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    private var deleteTitle: String {
+        pattern?.isSample == true ? "샘플 도안을 삭제할까요?" : "도안을 삭제할까요?"
+    }
+
+    private var deleteMessage: String {
+        if pattern?.isSample == true {
+            return "샘플 도안이 보관함에서 숨겨집니다. 직접 등록한 도안에는 영향 없습니다."
+        }
+        return "원본 파일, 작업용 PDF, 표시와 마지막 페이지 정보도 함께 삭제됩니다."
     }
 
     private func section<Content: View>(
@@ -188,7 +246,7 @@ struct PatternDetailsView: View {
     ) -> some View {
         VStack(alignment: .leading, spacing: YDSpacing.x3) {
             Text(title)
-                .font(.system(size: 15, weight: .heavy))
+                .font(YDFont.font(size: 15, weight: .heavy))
                 .foregroundStyle(YDColor.ink)
             content()
         }
@@ -203,7 +261,7 @@ struct PatternDetailsView: View {
     ) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
-                .font(.system(size: 12, weight: .heavy))
+                .font(YDFont.font(size: 12, weight: .heavy))
                 .foregroundStyle(YDColor.muted)
             content()
                 .textInputAutocapitalization(.never)
@@ -228,11 +286,36 @@ struct PatternDetailsView: View {
     private func fileInformation(_ pattern: PatternItem) -> some View {
         VStack(alignment: .leading, spacing: YDSpacing.x3) {
             Text("파일 정보")
-                .font(.system(size: 15, weight: .heavy))
+                .font(YDFont.font(size: 15, weight: .heavy))
                 .foregroundStyle(YDColor.ink)
             informationRow("파일명", pattern.originalFileName)
             informationRow("형식", pattern.sourceFileType.rawValue.uppercased())
             informationRow("페이지", "\(pattern.pageCount)쪽")
+            if store.missingFilePatternIDs.contains(pattern.id) {
+                Text("원본 또는 작업용 PDF 파일이 누락되었습니다.")
+                    .font(YDFont.font(size: 12, weight: .bold))
+                    .foregroundStyle(YDColor.danger)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, YDSpacing.x1)
+            } else if store.checksumMismatchPatternIDs.contains(pattern.id) {
+                Text("저장된 파일 checksum이 등록 시점과 다릅니다. 파일을 다시 선택해 복구할 수 있습니다.")
+                    .font(YDFont.font(size: 12, weight: .bold))
+                    .foregroundStyle(YDColor.danger)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, YDSpacing.x1)
+            }
+            if !pattern.isSample {
+                Button("파일 다시 선택") {
+                    showsReconnectPicker = true
+                }
+                .font(YDFont.font(size: 13, weight: .heavy))
+                .foregroundStyle(YDColor.yarn4)
+                .frame(maxWidth: .infinity)
+                .frame(minHeight: 42)
+                .background(YDColor.surfaceGreen)
+                .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
+                .padding(.top, YDSpacing.x2)
+            }
         }
         .padding(YDSpacing.x4)
         .ydSurfaceCard()
@@ -241,11 +324,11 @@ struct PatternDetailsView: View {
     private func informationRow(_ title: String, _ value: String) -> some View {
         HStack(alignment: .top) {
             Text(title)
-                .font(.system(size: 12, weight: .bold))
+                .font(YDFont.font(size: 12, weight: .bold))
                 .foregroundStyle(YDColor.muted)
                 .frame(width: 54, alignment: .leading)
             Text(value)
-                .font(.system(size: 13))
+                .font(YDFont.font(size: 13))
                 .foregroundStyle(YDColor.ink)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -268,6 +351,7 @@ struct PatternDetailsView: View {
         needleSize = pattern.materialInfo?.needleSizeMM.editText ?? ""
         hookSize = pattern.materialInfo?.hookSizeMM.editText ?? ""
         notes = pattern.notes ?? ""
+        progress = min(max(pattern.progress, 0), 1)
     }
 
     private func save() {
@@ -296,6 +380,7 @@ struct PatternDetailsView: View {
             )
             updatedPattern.materialInfo = material.isEmpty ? nil : material
             updatedPattern.notes = notes.nilIfBlank
+            updatedPattern.progress = min(max(progress, 0), 1)
 
             isSaving = true
             errorMessage = nil
@@ -322,6 +407,22 @@ struct PatternDetailsView: View {
                 try await store.deletePattern(patternID)
                 dismiss()
                 onDeleted()
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    private func reconnectFile(_ url: URL) {
+        isSaving = true
+        errorMessage = nil
+        Task {
+            defer { isSaving = false }
+            do {
+                try await store.reconnectPatternFile(sourceURL: url, for: patternID)
+                didLoad = false
+                loadPatternIfNeeded()
+                errorMessage = nil
             } catch {
                 errorMessage = error.localizedDescription
             }
@@ -378,5 +479,57 @@ private extension String {
     var nilIfBlank: String? {
         let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
+    }
+}
+
+private struct PatternReconnectDocumentPicker: UIViewControllerRepresentable {
+    let allowedContentTypes: [UTType]
+    let onPick: (URL) -> Void
+    let onFailure: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onPick: onPick, onFailure: onFailure)
+    }
+
+    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
+        let picker = UIDocumentPickerViewController(
+            forOpeningContentTypes: allowedContentTypes,
+            asCopy: true
+        )
+        picker.delegate = context.coordinator
+        picker.allowsMultipleSelection = false
+        picker.shouldShowFileExtensions = true
+        return picker
+    }
+
+    func updateUIViewController(
+        _ uiViewController: UIDocumentPickerViewController,
+        context: Context
+    ) {}
+
+    final class Coordinator: NSObject, UIDocumentPickerDelegate {
+        private let onPick: (URL) -> Void
+        private let onFailure: () -> Void
+
+        init(
+            onPick: @escaping (URL) -> Void,
+            onFailure: @escaping () -> Void
+        ) {
+            self.onPick = onPick
+            self.onFailure = onFailure
+        }
+
+        func documentPicker(
+            _ controller: UIDocumentPickerViewController,
+            didPickDocumentsAt urls: [URL]
+        ) {
+            guard let url = urls.first else {
+                onFailure()
+                return
+            }
+            onPick(url)
+        }
+
+        func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {}
     }
 }

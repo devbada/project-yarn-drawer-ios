@@ -2,6 +2,8 @@ import SwiftUI
 
 struct PatternCardView: View {
     let pattern: PatternItem
+    var isFileMissing = false
+    var hasChecksumMismatch = false
     let onOpen: () -> Void
     let onToggleFavorite: () -> Void
     let onShowDetails: () -> Void
@@ -19,21 +21,32 @@ struct PatternCardView: View {
 
                     VStack(alignment: .leading, spacing: 0) {
                         Text(pattern.title)
-                            .font(.system(size: 16, weight: .bold))
+                            .font(YDFont.font(size: 16, weight: .bold))
                             .tracking(-0.4)
                             .foregroundStyle(YDColor.ink)
                             .lineLimit(2)
 
                         Text(pattern.metadataLine)
-                            .font(.system(size: 12))
+                            .font(YDFont.font(size: 12))
                             .foregroundStyle(YDColor.muted)
                             .lineLimit(1)
                             .padding(.top, 6)
 
+                        if isFileMissing || hasChecksumMismatch {
+                            Text(isFileMissing ? "파일 누락" : "파일 변경됨")
+                                .font(YDFont.font(size: 11, weight: .heavy))
+                                .foregroundStyle(YDColor.danger)
+                                .padding(.horizontal, 8)
+                                .frame(minHeight: 24)
+                                .background(YDColor.danger.opacity(0.08))
+                                .clipShape(Capsule())
+                                .padding(.top, 8)
+                        }
+
                         HStack(spacing: 5) {
                             ForEach(pattern.tags.prefix(3), id: \.self) { tag in
                                 Text(tag)
-                                    .font(.system(size: 11, weight: .bold))
+                                    .font(YDFont.font(size: 11, weight: .bold))
                                     .foregroundStyle(YDColor.muted)
                                     .padding(.horizontal, 8)
                                     .frame(minHeight: 25)
@@ -55,7 +68,7 @@ struct PatternCardView: View {
                             .frame(height: 6)
 
                             Text(pattern.progress >= 1 ? "완료" : "\(Int(pattern.progress * 100))%")
-                                .font(.system(size: 11, weight: .bold))
+                                .font(YDFont.font(size: 11, weight: .bold))
                                 .foregroundStyle(YDColor.muted)
                         }
                         .padding(.top, 12)
@@ -117,13 +130,13 @@ private struct PatternThumbnail: View {
                 .frame(width: 62, height: 62)
                 .overlay {
                     Text(symbol)
-                        .font(.system(size: 22, weight: .black))
+                        .font(YDFont.font(size: 22, weight: .black))
                         .foregroundStyle(YDColor.ink.opacity(0.75))
                 }
             VStack {
                 HStack {
                     Text(badge)
-                        .font(.system(size: 10, weight: .heavy))
+                        .font(YDFont.font(size: 10, weight: .heavy))
                         .foregroundStyle(YDColor.cream0)
                         .padding(.vertical, 5)
                         .padding(.horizontal, 8)

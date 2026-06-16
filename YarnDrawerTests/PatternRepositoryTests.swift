@@ -43,6 +43,22 @@ final class PatternRepositoryTests: XCTestCase {
 
         XCTAssertTrue(recovered.isEmpty)
     }
+
+    func testHiddenSampleIDsRoundTrip() async throws {
+        let rootURL = FileManager.default.temporaryDirectory
+            .appending(path: UUID().uuidString, directoryHint: .isDirectory)
+        defer {
+            try? FileManager.default.removeItem(at: rootURL)
+        }
+
+        let repository = PatternRepository(rootURL: rootURL)
+        let sampleID = PatternItem.samples[0].id
+
+        try await repository.hideSample(id: sampleID)
+        let hiddenSampleIDs = try await repository.hiddenSampleIDs()
+
+        XCTAssertEqual(hiddenSampleIDs, Set([sampleID]))
+    }
 }
 
 private extension PatternItem {

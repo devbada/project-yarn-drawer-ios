@@ -2,7 +2,7 @@ import Foundation
 
 enum PatternStoreError: LocalizedError {
     case patternNotFound
-    case sampleIsReadOnly
+    case sampleEditNotAllowed
     case invalidTitle
     case invalidDesignerName
 
@@ -10,8 +10,8 @@ enum PatternStoreError: LocalizedError {
         switch self {
         case .patternNotFound:
             "도안 정보를 찾지 못했습니다."
-        case .sampleIsReadOnly:
-            "샘플 도안은 수정하거나 삭제할 수 없습니다."
+        case .sampleEditNotAllowed:
+            "샘플 도안은 수정할 수 없습니다."
         case .invalidTitle:
             "도안명은 1자 이상 100자 이하로 입력해 주세요."
         case .invalidDesignerName:
@@ -23,6 +23,8 @@ enum PatternStoreError: LocalizedError {
 @MainActor
 final class PatternStore: ObservableObject {
     @Published private(set) var patterns: [PatternItem] = PatternItem.samples
+    @Published private(set) var missingFilePatternIDs: Set<PatternItem.ID> = []
+    @Published private(set) var checksumMismatchPatternIDs: Set<PatternItem.ID> = []
     @Published var selectedPattern: PatternItem?
     @Published var isImporting = false
     @Published var importErrorMessage: String?
@@ -47,7 +49,12 @@ final class PatternStore: ObservableObject {
     func load() async {
         do {
             let persistedPatterns = try await repository.load()
-            patterns = PatternItem.samples + persistedPatterns
+            let hiddenSampleIDs = (try? await repository.hiddenSampleIDs()) ?? []
+            let visibleSamples = PatternItem.samples.filter {
+                !hiddenSampleIDs.contains($0.id)
+            }
+            patterns = visibleSamples + persistedPatterns
+            await refreshMissingFileStatus()
         } catch {
             importErrorMessage = "저장된 도안 정보를 불러오지 못했습니다."
         }
@@ -63,9 +70,11 @@ final class PatternStore: ObservableObject {
         defer { isImporting = false }
 
         do {
-            let pattern = try await fileAssetStore.importPattern(draft)
+            var pattern = try await fileAssetStore.importPattern(draft)
+            pattern.lastOpenedAt = Date()
             patterns.append(pattern)
             try await persist()
+            await refreshMissingFileStatus()
             selectedPattern = pattern
             return true
         } catch {
@@ -90,12 +99,28 @@ final class PatternStore: ObservableObject {
         patterns.first { $0.id == id }
     }
 
+    func openPattern(_ id: PatternItem.ID) {
+        guard let index = patterns.firstIndex(where: { $0.id == id }) else {
+            return
+        }
+        patterns[index].lastOpenedAt = Date()
+        patterns[index].updatedAt = Date()
+        selectedPattern = patterns[index]
+
+        guard !patterns[index].isSample else {
+            return
+        }
+        Task {
+            try? await persist()
+        }
+    }
+
     func updatePattern(_ pattern: PatternItem) async throws {
         guard let index = patterns.firstIndex(where: { $0.id == pattern.id }) else {
             throw PatternStoreError.patternNotFound
         }
         guard !patterns[index].isSample else {
-            throw PatternStoreError.sampleIsReadOnly
+            throw PatternStoreError.sampleEditNotAllowed
         }
 
         let title = pattern.title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -120,17 +145,44 @@ final class PatternStore: ObservableObject {
         }
     }
 
+    func updateProgress(_ progress: Double, for id: PatternItem.ID) async throws {
+        guard let index = patterns.firstIndex(where: { $0.id == id }) else {
+            throw PatternStoreError.patternNotFound
+        }
+        guard !patterns[index].isSample else {
+            return
+        }
+
+        patterns[index].progress = min(max(progress, 0), 1)
+        patterns[index].updatedAt = Date()
+        try await persist()
+
+        if selectedPattern?.id == id {
+            selectedPattern = patterns[index]
+        }
+    }
+
     func deletePattern(_ id: PatternItem.ID) async throws {
         guard let pattern = pattern(id: id) else {
             throw PatternStoreError.patternNotFound
         }
-        guard !pattern.isSample else {
-            throw PatternStoreError.sampleIsReadOnly
+
+        if pattern.isSample {
+            try await repository.hideSample(id: id)
+            patterns.removeAll { $0.id == id }
+            await refreshMissingFileStatus()
+            if selectedPattern?.id == id {
+                selectedPattern = nil
+            }
+            try? await annotationRepository.delete(patternID: id)
+            try? await viewerStateRepository.delete(patternID: id)
+            return
         }
 
         let remainingPatterns = patterns.filter { $0.id != id }
         try await repository.saveAfterDeletion(remainingPatterns)
         patterns = remainingPatterns
+        await refreshMissingFileStatus()
 
         if selectedPattern?.id == id {
             selectedPattern = nil
@@ -139,6 +191,43 @@ final class PatternStore: ObservableObject {
         try? await fileAssetStore.deletePatternFiles(patternID: id)
         try? await annotationRepository.delete(patternID: id)
         try? await viewerStateRepository.delete(patternID: id)
+    }
+
+    func reconnectPatternFile(
+        sourceURL: URL,
+        for id: PatternItem.ID
+    ) async throws {
+        guard let index = patterns.firstIndex(where: { $0.id == id }) else {
+            throw PatternStoreError.patternNotFound
+        }
+        guard !patterns[index].isSample else {
+            throw PatternStoreError.sampleEditNotAllowed
+        }
+
+        let updatedPattern = try await fileAssetStore.reconnectPatternFile(
+            sourceURL: sourceURL,
+            for: patterns[index]
+        )
+        patterns[index] = updatedPattern
+        try await persist()
+        await refreshMissingFileStatus()
+
+        if selectedPattern?.id == id {
+            selectedPattern = updatedPattern
+        }
+    }
+
+    func localStorageByteSize() async -> Int64 {
+        await fileAssetStore.appDataByteSize()
+    }
+
+    func deleteAllLocalData() async throws {
+        try await fileAssetStore.deleteAllAppData()
+        patterns = PatternItem.samples
+        missingFilePatternIDs = []
+        checksumMismatchPatternIDs = []
+        selectedPattern = nil
+        importErrorMessage = nil
     }
 
     func viewURL(for pattern: PatternItem) async -> URL? {
@@ -170,10 +259,15 @@ final class PatternStore: ObservableObject {
         try await viewerStateRepository.load(patternID: patternID)
     }
 
-    func saveViewerPage(_ pageIndex: Int, for patternID: PatternItem.ID) async throws {
+    func saveViewerState(
+        pageIndex: Int,
+        scaleFactor: Double?,
+        for patternID: PatternItem.ID
+    ) async throws {
         let state = PatternViewerState(
             patternID: patternID,
             lastPageIndex: max(0, pageIndex),
+            scaleFactor: scaleFactor.map { min(max($0, 0.25), 8) },
             updatedAt: Date()
         )
         try await viewerStateRepository.save(state)
@@ -194,5 +288,10 @@ final class PatternStore: ObservableObject {
 
     private func persist() async throws {
         try await repository.save(patterns)
+    }
+
+    private func refreshMissingFileStatus() async {
+        missingFilePatternIDs = await fileAssetStore.missingFilePatternIDs(for: patterns)
+        checksumMismatchPatternIDs = await fileAssetStore.checksumMismatchPatternIDs(for: patterns)
     }
 }

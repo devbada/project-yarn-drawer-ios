@@ -109,10 +109,10 @@ struct RootView: View {
             BrandMarkView()
             VStack(alignment: .leading, spacing: 2) {
                 Text("뜨개서랍")
-                    .font(.system(size: 18, weight: .bold))
+                    .font(YDFont.font(size: 18, weight: .bold))
                     .foregroundStyle(YDColor.ink)
                 Text(section.subtitle)
-                    .font(.system(size: 12, weight: .bold))
+                    .font(YDFont.font(size: 12, weight: .bold))
                     .foregroundStyle(YDColor.muted)
             }
             Spacer()
@@ -126,7 +126,7 @@ struct RootView: View {
                     }
                     .frame(minHeight: YDLayout.minimumTouchTarget)
                     .padding(.horizontal, 15)
-                    .font(.system(size: 14, weight: .heavy))
+                    .font(YDFont.font(size: 14, weight: .heavy))
                     .foregroundStyle(YDColor.cream0)
                     .background(YDColor.yarn4)
                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -153,7 +153,7 @@ struct RootView: View {
                     VStack(spacing: 4) {
                         YDIconView(icon: item.icon, size: 23)
                         Text(item.title)
-                            .font(.system(size: 11, weight: .bold))
+                            .font(YDFont.font(size: 11, weight: .bold))
                     }
                     .foregroundStyle(section == item ? YDColor.yarn4 : YDColor.muted)
                     .frame(maxWidth: .infinity)
@@ -188,7 +188,7 @@ struct RootView: View {
                         VStack(spacing: 4) {
                             YDIconView(icon: item.icon, size: 23)
                             Text(item.title)
-                                .font(.system(size: 11, weight: .bold))
+                                .font(YDFont.font(size: 11, weight: .bold))
                         }
                         .foregroundStyle(section == item ? YDColor.yarn4 : YDColor.muted)
                         .frame(width: 74, height: 58)

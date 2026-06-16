@@ -15,6 +15,7 @@
 		202E37CB1AD92A8CF303F5C3 /* AnnotationRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B15D914476EE03B793B707C /* AnnotationRepository.swift */; };
 		289BCA1EF8AB200E7E44473F /* PatternModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D3C3E7182B111C2902D70FC /* PatternModels.swift */; };
 		36B4BF40584BC8BECB8DE568 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A372D7B9A0B6418210AE7469 /* Assets.xcassets */; };
+		36F1A9D23C4B5E60718293A4 /* Fonts in Resources */ = {isa = PBXBuildFile; fileRef = F6E5D4C3B2A1908172635443 /* Fonts */; };
 		3B228A59E4B268BE97E33FB7 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D23D72E4762952860897C42 /* RootView.swift */; };
 		3B41685B718B919507AF0A2D /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00E377188E66ACD5A4ED1A71 /* LibraryView.swift */; };
 		4419A79FC639EE078D68759C /* GaugeCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20F0871BD9E5CC1424150EB /* GaugeCalculatorTests.swift */; };
@@ -74,6 +75,7 @@
 		D9D0DE59508934E3830EEF66 /* PatternStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternStore.swift; sourceTree = "<group>"; };
 		EA7B6D66DF91CDB00763AE5C /* PatternRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternRepository.swift; sourceTree = "<group>"; };
 		EA8B170DA68A4086CCC35C1A /* GaugeCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GaugeCalculator.swift; sourceTree = "<group>"; };
+		F6E5D4C3B2A1908172635443 /* Fonts */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Fonts; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -219,6 +221,7 @@
 			isa = PBXGroup;
 			children = (
 				A372D7B9A0B6418210AE7469 /* Assets.xcassets */,
+				F6E5D4C3B2A1908172635443 /* Fonts */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -281,11 +284,12 @@
 			};
 			buildConfigurationList = 6B69AACBB45A12DB13EB97E2 /* Build configuration list for PBXProject "YarnDrawer" */;
 			compatibilityVersion = "Xcode 14.0";
-			developmentRegion = en;
+			developmentRegion = ko;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				Base,
 				en,
+				ko,
 			);
 			mainGroup = 93881F4BA765586D7ADF2BE3;
 			minimizedProjectReferenceProxies = 1;
@@ -304,6 +308,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				36B4BF40584BC8BECB8DE568 /* Assets.xcassets in Resources */,
+				36F1A9D23C4B5E60718293A4 /* Fonts in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

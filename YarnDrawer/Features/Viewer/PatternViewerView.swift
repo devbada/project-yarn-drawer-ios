@@ -2,6 +2,7 @@ import SwiftUI
 
 private enum PatternTool: String, CaseIterable, Identifiable {
     case highlight
+    case eraser
     case check
     case note
     case currentRow
@@ -11,15 +12,17 @@ private enum PatternTool: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .highlight: "형광펜"
+        case .eraser: "지우개"
         case .check: "체크"
         case .note: "메모"
         case .currentRow: "현재 줄"
         }
     }
 
-    var icon: YDIcon {
+    var icon: YDIcon? {
         switch self {
         case .highlight: .highlight
+        case .eraser: nil
         case .check: .check
         case .note: .note
         case .currentRow: .row
@@ -53,14 +56,27 @@ struct PatternViewerView: View {
     @State private var protectedAction: ProtectedAction?
     @State private var showsUnsavedAlert = false
     @State private var viewURL: URL?
+    @State private var isDocumentLoading = true
     @State private var toastMessage: String?
     @State private var annotations: [PatternAnnotation] = []
     @State private var pendingAnnotationSaveCount = 0
     @State private var annotationSaveFailed = false
     @State private var initialPageIndex = 0
+    @State private var initialProgress: Double?
+    @State private var initialScaleFactor: Double?
+    @State private var currentScaleFactor: Double?
     @State private var lastSavedPageIndex = -1
+    @State private var editingNote: PatternAnnotation?
+    @State private var noteText = ""
+    @State private var showsNoteEditor = false
+    @State private var undoStack: [[PatternAnnotation]] = []
+    @State private var redoStack: [[PatternAnnotation]] = []
     @State private var selectedHighlightHex = HighlightInk.presets[0].hex
     @State private var customHighlightColor = Color(hex: 0xF9A8D4)
+    @AppStorage("viewerSelectedTool")
+    private var storedSelectedTool = PatternTool.check.rawValue
+    @AppStorage("viewerSelectedHighlightHex")
+    private var storedSelectedHighlightHex = HighlightInk.presets[0].hex
     @AppStorage("highlightFavoriteHexes")
     private var highlightFavoriteHexes = ""
 
@@ -103,7 +119,7 @@ struct PatternViewerView: View {
                 VStack {
                     Spacer()
                     Text(toastMessage)
-                        .font(.system(size: 13, weight: .bold))
+                        .font(YDFont.font(size: 13, weight: .bold))
                         .foregroundStyle(YDColor.cream0)
                         .padding(.horizontal, YDSpacing.x4)
                         .padding(.vertical, YDSpacing.x3)
@@ -114,16 +130,35 @@ struct PatternViewerView: View {
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
+        .onAppear {
+            restoreViewerToolPreferences()
+        }
+        .onChange(of: selectedTool) { _, tool in
+            storedSelectedTool = tool.rawValue
+        }
+        .onChange(of: selectedHighlightHex) { _, hex in
+            storedSelectedHighlightHex = hex
+        }
         .task {
+            isDocumentLoading = !pattern.isSample
             do {
-                initialPageIndex = try await store.viewerState(for: pattern.id)?
-                    .lastPageIndex ?? 0
+                let viewerState = try await store.viewerState(for: pattern.id)
                 annotations = try await store.annotations(for: pattern.id)
+                initialScaleFactor = viewerState?.scaleFactor
+                currentScaleFactor = viewerState?.scaleFactor
+                if let restoredProgress {
+                    initialPageIndex = 0
+                    initialProgress = restoredProgress
+                } else {
+                    initialPageIndex = viewerState?.lastPageIndex ?? 0
+                    initialProgress = nil
+                }
             } catch {
                 annotationSaveFailed = true
                 showToast("저장된 작업 상태를 불러오지 못했습니다.")
             }
             viewURL = await store.viewURL(for: pattern)
+            isDocumentLoading = false
         }
         .sheet(item: $activeSheet) { sheet in
             switch sheet {
@@ -155,6 +190,22 @@ struct PatternViewerView: View {
         } message: {
             Text("현재 작업을 저장한 뒤 요청한 동작을 계속합니다.")
         }
+        .alert("메모", isPresented: $showsNoteEditor) {
+            TextField("메모 내용", text: $noteText)
+            Button("취소", role: .cancel) {
+                clearEditingNote()
+            }
+            if isEditingExistingNote {
+                Button("삭제", role: .destructive) {
+                    deleteEditingNote()
+                }
+            }
+            Button("저장") {
+                saveEditingNote()
+            }
+        } message: {
+            Text("선택한 위치에 메모를 저장합니다.")
+        }
     }
 
     private var viewerTopBar: some View {
@@ -165,11 +216,11 @@ struct PatternViewerView: View {
             Spacer()
             VStack(spacing: 2) {
                 Text(store.pattern(id: pattern.id)?.title ?? pattern.title)
-                    .font(.system(size: 14, weight: .bold))
+                    .font(YDFont.font(size: 14, weight: .bold))
                     .foregroundStyle(YDColor.ink)
                     .lineLimit(1)
                 Text(viewerStatus)
-                    .font(.system(size: 11, weight: .bold))
+                    .font(YDFont.font(size: 11, weight: .bold))
                     .foregroundStyle(YDColor.yarn4)
                     .accessibilityLabel(viewerStatus)
             }
@@ -194,15 +245,22 @@ struct PatternViewerView: View {
                 annotations: annotations,
                 annotationTool: activePDFAnnotationTool,
                 showsAnnotations: !isOriginalMode,
+                allowsTextSelection: isOriginalMode,
                 highlightHex: selectedHighlightHex,
                 initialPageIndex: initialPageIndex,
+                initialProgress: initialProgress,
+                initialScaleFactor: initialScaleFactor,
                 onAnnotationCreated: addAnnotation,
-                onPageChanged: saveCurrentPage
+                onAnnotationDeleted: { deleteAnnotation($0) },
+                onAnnotationMoved: moveAnnotation,
+                onNoteRequested: beginEditingNote,
+                onPageChanged: saveCurrentPage,
+                onScaleChanged: saveCurrentScale
             )
                 .overlay(alignment: .top) {
                     if isOriginalMode {
                         Text("원본 보기 · 표시 도구 잠김")
-                            .font(.system(size: 12, weight: .bold))
+                            .font(YDFont.font(size: 12, weight: .bold))
                             .foregroundStyle(YDColor.ink)
                             .padding(.horizontal, YDSpacing.x3)
                             .padding(.vertical, YDSpacing.x2)
@@ -211,7 +269,7 @@ struct PatternViewerView: View {
                             .padding(.top, YDSpacing.x3)
                     } else if selectedTool == .highlight {
                         Text("한 손가락 드래그: 형광펜 · 두 손가락 드래그: 이동")
-                            .font(.system(size: 12, weight: .bold))
+                            .font(YDFont.font(size: 12, weight: .bold))
                             .foregroundStyle(YDColor.ink)
                             .padding(.horizontal, YDSpacing.x3)
                             .padding(.vertical, YDSpacing.x2)
@@ -219,14 +277,20 @@ struct PatternViewerView: View {
                             .clipShape(Capsule())
                             .padding(.top, YDSpacing.x3)
                     } else if selectedTool == .check {
-                        Text("완료한 위치를 눌러 체크하세요.")
+                        Text("탭: 체크 · 길게 누름: 선택 후 이동")
+                            .viewerGuideStyle()
+                    } else if selectedTool == .eraser {
+                        Text("지울 표시를 누르세요.")
+                            .viewerGuideStyle()
+                    } else if selectedTool == .note {
+                        Text("탭: 메모 · 길게 누름: 선택 후 이동")
                             .viewerGuideStyle()
                     } else if selectedTool == .currentRow {
-                        Text("현재 작업 중인 줄을 누르세요.")
+                        Text("탭: 현재 줄 · 길게 누름: 선택 후 이동")
                             .viewerGuideStyle()
                     }
                 }
-        } else {
+        } else if pattern.isSample {
             SamplePatternPaper(
                 selectedTool: selectedTool,
                 isOriginalMode: isOriginalMode,
@@ -235,6 +299,10 @@ struct PatternViewerView: View {
                     showToast(toolResultMessage)
                 }
             )
+        } else if isDocumentLoading {
+            DocumentLoadingView()
+        } else {
+            MissingDocumentView()
         }
     }
 
@@ -245,16 +313,20 @@ struct PatternViewerView: View {
                     selectedTool = tool
                     if tool == .highlight {
                         showToast("PDF 위를 한 손가락으로 드래그해 표시하세요.")
+                    } else if tool == .eraser {
+                        showToast("지울 표시를 누르세요.")
                     } else if tool == .check {
                         showToast("완료한 위치를 눌러 체크하세요.")
+                    } else if tool == .note {
+                        showToast("메모를 남길 위치를 누르세요.")
                     } else if tool == .currentRow {
                         showToast("현재 작업 중인 줄을 누르세요.")
                     }
                 } label: {
                     VStack(spacing: 3) {
-                        YDIconView(icon: tool.icon, size: 22)
+                        toolIcon(tool)
                         Text(tool.title)
-                            .font(.system(size: 10, weight: .bold))
+                            .font(YDFont.font(size: 10, weight: .bold))
                     }
                     .foregroundStyle(selectedTool == tool ? YDColor.yarn4 : YDColor.muted)
                     .frame(maxWidth: .infinity)
@@ -274,7 +346,7 @@ struct PatternViewerView: View {
                 VStack(spacing: 3) {
                     YDIconView(icon: .more, size: 22)
                     Text("더보기")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(YDFont.font(size: 10, weight: .bold))
                 }
                 .foregroundStyle(YDColor.muted)
                 .frame(maxWidth: .infinity)
@@ -290,12 +362,37 @@ struct PatternViewerView: View {
         }
     }
 
+    @ViewBuilder
+    private func toolIcon(_ tool: PatternTool) -> some View {
+        if let icon = tool.icon {
+            YDIconView(icon: icon, size: 22)
+        } else {
+            Image(systemName: "eraser")
+                .font(YDFont.symbol(size: 19, weight: .bold))
+                .frame(width: 22, height: 22)
+        }
+    }
+
     private var highlightColorPicker: some View {
         VStack(spacing: 2) {
             HStack(spacing: YDSpacing.x2) {
                 Text("형광펜 팔레트")
-                    .font(.system(size: 12, weight: .bold))
+                    .font(YDFont.font(size: 12, weight: .bold))
                     .foregroundStyle(YDColor.muted)
+                Button {
+                    undoLastHighlight()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.uturn.backward")
+                            .font(YDFont.symbol(size: 12, weight: .bold))
+                        Text("실행 취소")
+                    }
+                    .font(YDFont.font(size: 12, weight: .bold))
+                    .foregroundStyle(hasHighlightAnnotations ? YDColor.yarn4 : YDColor.muted)
+                    .frame(minHeight: YDLayout.minimumTouchTarget)
+                }
+                .buttonStyle(.plain)
+                .disabled(!hasHighlightAnnotations)
                 Spacer()
                 ColorPicker(
                     "사용자 색상",
@@ -311,9 +408,10 @@ struct PatternViewerView: View {
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "plus")
+                            .font(YDFont.symbol(size: 12, weight: .bold))
                         Text("즐겨찾기")
                     }
-                    .font(.system(size: 12, weight: .bold))
+                    .font(YDFont.font(size: 12, weight: .bold))
                     .foregroundStyle(YDColor.yarn4)
                     .frame(minHeight: YDLayout.minimumTouchTarget)
                 }
@@ -356,7 +454,7 @@ struct PatternViewerView: View {
                 .overlay(alignment: .topTrailing) {
                     if favoriteHighlightColors.contains(where: { $0.hex == ink.hex }) {
                         Image(systemName: "star.fill")
-                            .font(.system(size: 9))
+                            .font(YDFont.symbol(size: 9))
                             .foregroundStyle(YDColor.wood3)
                             .offset(x: 4, y: -4)
                     }
@@ -393,6 +491,22 @@ struct PatternViewerView: View {
         }
     }
 
+    private var hasHighlightAnnotations: Bool {
+        annotations.contains { $0.type == .highlight }
+    }
+
+    private func undoLastHighlight() {
+        guard
+            let annotation = annotations
+                .filter({ $0.type == .highlight })
+                .max(by: { $0.createdAt < $1.createdAt })
+        else {
+            showToast("되돌릴 형광펜 표시가 없습니다.")
+            return
+        }
+        deleteAnnotation(annotation, successMessage: "마지막 형광펜 표시를 되돌렸습니다.")
+    }
+
     private func addFavoriteHighlightColor() {
         let hex = customHighlightColor.highlightHex
         var values = highlightFavoriteHexes
@@ -420,6 +534,20 @@ struct PatternViewerView: View {
     private var viewerToolsSheet: some View {
         NavigationStack {
             VStack(spacing: 9) {
+                HStack(spacing: YDSpacing.x2) {
+                    historyButton(
+                        title: "실행 취소",
+                        systemImage: "arrow.uturn.backward",
+                        isEnabled: !undoStack.isEmpty,
+                        action: undoAnnotationChange
+                    )
+                    historyButton(
+                        title: "다시 실행",
+                        systemImage: "arrow.uturn.forward",
+                        isEnabled: !redoStack.isEmpty,
+                        action: redoAnnotationChange
+                    )
+                }
                 sheetAction(
                     title: isOriginalMode ? "편집본으로 돌아가기" : "원본 보기",
                     description: isOriginalMode
@@ -450,6 +578,29 @@ struct PatternViewerView: View {
         }
     }
 
+    private func historyButton(
+        title: String,
+        systemImage: String,
+        isEnabled: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: systemImage)
+                .font(YDFont.font(size: 13, weight: .heavy))
+                .foregroundStyle(isEnabled ? YDColor.yarn4 : YDColor.muted)
+                .frame(maxWidth: .infinity)
+                .frame(minHeight: 48)
+                .background(isEnabled ? YDColor.surfaceGreen : YDColor.cream2)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(YDColor.line, lineWidth: 1)
+                }
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+    }
+
     private func sheetAction(
         title: String,
         description: String,
@@ -458,11 +609,11 @@ struct PatternViewerView: View {
         Button(action: action) {
             HStack {
                 Text(title)
-                    .font(.system(size: 14, weight: .heavy))
+                    .font(YDFont.font(size: 14, weight: .heavy))
                     .foregroundStyle(YDColor.ink)
                 Spacer()
                 Text(description)
-                    .font(.system(size: 12))
+                    .font(YDFont.font(size: 12))
                     .foregroundStyle(YDColor.muted)
                     .multilineTextAlignment(.trailing)
             }
@@ -497,17 +648,54 @@ struct PatternViewerView: View {
         }
         return switch selectedTool {
         case .highlight: .highlight
+        case .eraser: .eraser
         case .check: .check
         case .currentRow: .currentRow
-        case .note: nil
+        case .note: .note
         }
+    }
+
+    private var restoredProgress: Double? {
+        let progress = latestCheckProgress ?? pattern.progress
+        guard progress > 0 else {
+            return nil
+        }
+        return min(max(progress, 0), 1)
+    }
+
+    private var latestCheckProgress: Double? {
+        guard pattern.pageCount > 0 else {
+            return nil
+        }
+        return latestCheckAnnotation.map {
+            progress(for: $0)
+        }
+    }
+
+    private var latestCheckAnnotation: PatternAnnotation? {
+        annotations
+            .filter { $0.type == .check }
+            .max { $0.createdAt < $1.createdAt }
+    }
+
+    private func progress(for annotation: PatternAnnotation) -> Double {
+        let pageCount = max(1, pattern.pageCount)
+        let pageProgress = min(
+            max(1 - annotation.bounds.centerY, 0),
+            1
+        )
+        let rawProgress = (
+            Double(annotation.pageIndex) + pageProgress
+        ) / Double(pageCount)
+        return min(max(rawProgress, 0), 1)
     }
 
     private var toolResultMessage: String {
         switch selectedTool {
         case .highlight: "형광펜 표시를 변경했습니다."
+        case .eraser: "표시를 지웠습니다."
         case .check: "완료 체크를 변경했습니다."
-        case .note: "이 줄에 메모를 연결했습니다."
+        case .note: "메모를 변경했습니다."
         case .currentRow: "현재 작업 줄을 옮겼습니다."
         }
     }
@@ -546,7 +734,56 @@ struct PatternViewerView: View {
         protectedAction = nil
     }
 
+    private func restoreViewerToolPreferences() {
+        selectedTool = PatternTool(rawValue: storedSelectedTool) ?? .check
+        let hex = String(storedSelectedHighlightHex.filter(\.isHexDigit).prefix(6)).uppercased()
+        guard hex.count == 6 else {
+            return
+        }
+        selectedHighlightHex = hex
+        customHighlightColor = Color(highlightHex: hex)
+    }
+
+    private func recordAnnotationHistory() {
+        undoStack.append(annotations)
+        if undoStack.count > 50 {
+            undoStack.removeFirst()
+        }
+        redoStack.removeAll()
+    }
+
+    private func undoAnnotationChange() {
+        guard let previousAnnotations = undoStack.popLast() else {
+            showToast("되돌릴 작업이 없습니다.")
+            return
+        }
+        redoStack.append(annotations)
+        annotations = previousAnnotations
+        saveAnnotationSnapshot(
+            successMessage: "이전 작업으로 되돌렸습니다.",
+            failureMessage: "실행 취소를 저장하지 못했습니다.",
+            startedMessage: "실행 취소를 저장합니다.",
+            updatesProgress: true
+        )
+    }
+
+    private func redoAnnotationChange() {
+        guard let nextAnnotations = redoStack.popLast() else {
+            showToast("다시 실행할 작업이 없습니다.")
+            return
+        }
+        undoStack.append(annotations)
+        annotations = nextAnnotations
+        saveAnnotationSnapshot(
+            successMessage: "작업을 다시 실행했습니다.",
+            failureMessage: "다시 실행을 저장하지 못했습니다.",
+            startedMessage: "다시 실행을 저장합니다.",
+            updatesProgress: true
+        )
+    }
+
     private func addAnnotation(_ annotation: PatternAnnotation) {
+        recordAnnotationHistory()
         if annotation.type == .currentRow {
             annotations.removeAll { $0.type == .currentRow }
         }
@@ -563,6 +800,9 @@ struct PatternViewerView: View {
                 } else {
                     try await store.addAnnotation(annotation, to: pattern.id)
                 }
+                if annotation.type == .check {
+                    try await store.updateProgress(progress(for: annotation), for: pattern.id)
+                }
                 pendingAnnotationSaveCount = max(0, pendingAnnotationSaveCount - 1)
                 if pendingAnnotationSaveCount == 0 {
                     isDirty = false
@@ -577,13 +817,172 @@ struct PatternViewerView: View {
         }
     }
 
+    private func deleteAnnotation(
+        _ annotation: PatternAnnotation,
+        successMessage: String? = nil
+    ) {
+        recordAnnotationHistory()
+        annotations.removeAll { $0.id == annotation.id }
+        isDirty = true
+        annotationSaveFailed = false
+        pendingAnnotationSaveCount += 1
+        showToast("\(annotation.type.saveTitle)을 삭제합니다.")
+
+        Task {
+            do {
+                try await store.saveAnnotations(annotations, for: pattern.id)
+                if annotation.type == .check {
+                    try await store.updateProgress(latestCheckProgress ?? 0, for: pattern.id)
+                }
+                pendingAnnotationSaveCount = max(0, pendingAnnotationSaveCount - 1)
+                if pendingAnnotationSaveCount == 0 {
+                    isDirty = false
+                    showToast(successMessage ?? "\(annotation.type.saveTitle)을 삭제했습니다.")
+                }
+            } catch {
+                pendingAnnotationSaveCount = max(0, pendingAnnotationSaveCount - 1)
+                annotationSaveFailed = true
+                isDirty = true
+                showToast("\(annotation.type.saveTitle)을 삭제하지 못했습니다.")
+            }
+        }
+    }
+
+    private func moveAnnotation(_ annotation: PatternAnnotation) {
+        guard let index = annotations.firstIndex(where: { $0.id == annotation.id }) else {
+            return
+        }
+        recordAnnotationHistory()
+        annotations[index] = annotation
+        isDirty = true
+        annotationSaveFailed = false
+        pendingAnnotationSaveCount += 1
+        showToast("\(annotation.type.saveTitle)을 이동합니다.")
+
+        Task {
+            do {
+                try await store.saveAnnotations(annotations, for: pattern.id)
+                if annotation.type == .check {
+                    try await store.updateProgress(progress(for: annotation), for: pattern.id)
+                }
+                pendingAnnotationSaveCount = max(0, pendingAnnotationSaveCount - 1)
+                if pendingAnnotationSaveCount == 0 {
+                    isDirty = false
+                    showToast("\(annotation.type.saveTitle)을 이동했습니다.")
+                }
+            } catch {
+                pendingAnnotationSaveCount = max(0, pendingAnnotationSaveCount - 1)
+                annotationSaveFailed = true
+                isDirty = true
+                showToast("\(annotation.type.saveTitle)을 이동하지 못했습니다.")
+            }
+        }
+    }
+
+    private var isEditingExistingNote: Bool {
+        guard let editingNote else {
+            return false
+        }
+        return annotations.contains { $0.id == editingNote.id }
+    }
+
+    private func beginEditingNote(_ annotation: PatternAnnotation) {
+        editingNote = annotation
+        noteText = annotation.noteText ?? ""
+        showsNoteEditor = true
+    }
+
+    private func clearEditingNote() {
+        editingNote = nil
+        noteText = ""
+    }
+
+    private func saveEditingNote() {
+        guard var note = editingNote else {
+            return
+        }
+        let trimmedText = noteText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedText.isEmpty else {
+            showToast("메모 내용을 입력해 주세요.")
+            return
+        }
+
+        recordAnnotationHistory()
+        note.noteText = trimmedText
+        if let index = annotations.firstIndex(where: { $0.id == note.id }) {
+            annotations[index] = note
+        } else {
+            annotations.append(note)
+        }
+        clearEditingNote()
+        saveAnnotationSnapshot(
+            successMessage: "메모를 저장했습니다.",
+            failureMessage: "메모를 저장하지 못했습니다.",
+            startedMessage: "메모를 자동 저장합니다."
+        )
+    }
+
+    private func deleteEditingNote() {
+        guard let note = editingNote else {
+            return
+        }
+        clearEditingNote()
+        deleteAnnotation(note)
+    }
+
+    private func saveAnnotationSnapshot(
+        successMessage: String,
+        failureMessage: String,
+        startedMessage: String,
+        updatesProgress: Bool = false
+    ) {
+        isDirty = true
+        annotationSaveFailed = false
+        pendingAnnotationSaveCount += 1
+        showToast(startedMessage)
+
+        Task {
+            do {
+                try await store.saveAnnotations(annotations, for: pattern.id)
+                if updatesProgress {
+                    try await store.updateProgress(latestCheckProgress ?? 0, for: pattern.id)
+                }
+                pendingAnnotationSaveCount = max(0, pendingAnnotationSaveCount - 1)
+                if pendingAnnotationSaveCount == 0 {
+                    isDirty = false
+                    showToast(successMessage)
+                }
+            } catch {
+                pendingAnnotationSaveCount = max(0, pendingAnnotationSaveCount - 1)
+                annotationSaveFailed = true
+                isDirty = true
+                showToast(failureMessage)
+            }
+        }
+    }
+
     private func saveCurrentPage(_ pageIndex: Int) {
         guard pageIndex != lastSavedPageIndex else {
             return
         }
         lastSavedPageIndex = pageIndex
         Task {
-            try? await store.saveViewerPage(pageIndex, for: pattern.id)
+            try? await store.saveViewerState(
+                pageIndex: pageIndex,
+                scaleFactor: currentScaleFactor,
+                for: pattern.id
+            )
+        }
+    }
+
+    private func saveCurrentScale(_ scaleFactor: Double) {
+        currentScaleFactor = scaleFactor
+        Task {
+            try? await store.saveViewerState(
+                pageIndex: max(0, lastSavedPageIndex),
+                scaleFactor: scaleFactor,
+                for: pattern.id
+            )
         }
     }
 
@@ -623,6 +1022,7 @@ private extension PatternAnnotationType {
         switch self {
         case .highlight: "형광펜 표시"
         case .check: "체크"
+        case .note: "메모"
         case .currentRow: "현재 줄"
         }
     }
@@ -630,7 +1030,7 @@ private extension PatternAnnotationType {
 
 private extension View {
     func viewerGuideStyle() -> some View {
-        font(.system(size: 12, weight: .bold))
+        font(YDFont.font(size: 12, weight: .bold))
             .foregroundStyle(YDColor.ink)
             .padding(.horizontal, YDSpacing.x3)
             .padding(.vertical, YDSpacing.x2)
@@ -673,6 +1073,41 @@ private struct SamplePatternLine: Identifiable {
     var current = false
 }
 
+private struct DocumentLoadingView: View {
+    var body: some View {
+        VStack(spacing: YDSpacing.x3) {
+            ProgressView()
+                .tint(YDColor.yarn4)
+            Text("도안을 여는 중입니다.")
+                .font(YDFont.font(size: 14, weight: .bold))
+                .foregroundStyle(YDColor.ink)
+            Text("저장된 페이지와 표시를 복원하고 있습니다.")
+                .font(YDFont.font(size: 12))
+                .foregroundStyle(YDColor.muted)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(hex: 0xDED5C4))
+    }
+}
+
+private struct MissingDocumentView: View {
+    var body: some View {
+        VStack(spacing: YDSpacing.x3) {
+            YDIconView(icon: .storage, size: 34)
+                .foregroundStyle(YDColor.wood3)
+            Text("작업용 PDF를 열 수 없습니다.")
+                .font(YDFont.font(size: 15, weight: .bold))
+                .foregroundStyle(YDColor.ink)
+            Text("파일 누락 감지와 재연결은 남은 구현 항목입니다.")
+                .font(YDFont.font(size: 12))
+                .foregroundStyle(YDColor.muted)
+        }
+        .padding(YDSpacing.x6)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(hex: 0xDED5C4))
+    }
+}
+
 private struct SamplePatternPaper: View {
     let selectedTool: PatternTool
     let isOriginalMode: Bool
@@ -691,7 +1126,7 @@ private struct SamplePatternPaper: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
                 Text("몸판 뜨기")
-                    .font(.system(size: 24, weight: .bold))
+                    .font(YDFont.font(size: 24, weight: .bold))
                     .foregroundStyle(YDColor.ink)
 
                 VStack(alignment: .leading, spacing: YDSpacing.x4) {
@@ -702,14 +1137,14 @@ private struct SamplePatternPaper: View {
                             HStack(alignment: .top, spacing: 4) {
                                 if lines[index].checked && !isOriginalMode {
                                     Text("✓")
-                                        .fontWeight(.black)
+                                        .font(YDFont.font(size: 15, weight: .black))
                                         .foregroundStyle(YDColor.yarn4)
                                 }
                                 Text(lines[index].text)
                                     .foregroundStyle(Color(hex: 0x4F473B))
                                     .multilineTextAlignment(.leading)
                             }
-                            .font(.system(size: 15))
+                            .font(YDFont.font(size: 15))
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.vertical, 2)
                             .padding(.horizontal, 8)
@@ -749,10 +1184,14 @@ private struct SamplePatternPaper: View {
         switch selectedTool {
         case .highlight:
             lines[index].highlighted.toggle()
+        case .eraser:
+            lines[index].highlighted = false
+            lines[index].checked = false
+            lines[index].current = false
         case .check:
             lines[index].checked.toggle()
         case .note:
-            break
+            return
         case .currentRow:
             for lineIndex in lines.indices {
                 lines[lineIndex].current = lineIndex == index
@@ -770,7 +1209,7 @@ private struct CurrentPatternSymbolsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: YDSpacing.x3) {
                     Text("\(patternTitle) 전용 기호를 먼저 표시합니다.")
-                        .font(.system(size: 13))
+                        .font(YDFont.font(size: 13))
                         .foregroundStyle(YDColor.yarn4)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(14)
@@ -791,23 +1230,23 @@ private struct CurrentPatternSymbolsView: View {
     private func symbolRow(glyph: String, name: String, metadata: String) -> some View {
         HStack(spacing: 11) {
             Text(glyph)
-                .font(.system(size: 22, weight: .black))
+                .font(YDFont.font(size: 22, weight: .black))
                 .foregroundStyle(YDColor.yarn4)
                 .frame(width: 48, height: 48)
                 .background(YDColor.surfaceGreen)
                 .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
             VStack(alignment: .leading, spacing: 4) {
                 Text(name)
-                    .font(.system(size: 14, weight: .bold))
+                    .font(YDFont.font(size: 14, weight: .bold))
                     .foregroundStyle(YDColor.ink)
                 Text(metadata)
-                    .font(.system(size: 12))
+                    .font(YDFont.font(size: 12))
                     .foregroundStyle(YDColor.muted)
             }
             Spacer()
             Button("링크") {
             }
-            .font(.system(size: 12, weight: .heavy))
+            .font(YDFont.font(size: 12, weight: .heavy))
             .foregroundStyle(YDColor.wood3)
             .frame(minWidth: 44, minHeight: 38)
         }

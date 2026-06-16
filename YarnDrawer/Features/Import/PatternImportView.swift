@@ -4,7 +4,7 @@ import UniformTypeIdentifiers
 struct PatternImportView: View {
     @EnvironmentObject private var store: PatternStore
     @Environment(\.dismiss) private var dismiss
-    @State private var isFileImporterPresented = false
+    @State private var isDocumentPickerPresented = false
     @State private var selectedURL: URL?
     @State private var title = ""
     @State private var designerName = ""
@@ -21,10 +21,10 @@ struct PatternImportView: View {
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(selectedURL.lastPathComponent)
-                                    .font(.system(size: 13, weight: .bold))
+                                    .font(YDFont.font(size: 13, weight: .bold))
                                     .foregroundStyle(YDColor.yarn4)
                                 Text(filePolicyDescription)
-                                    .font(.system(size: 12))
+                                    .font(YDFont.font(size: 12))
                                     .foregroundStyle(YDColor.muted)
                             }
                             Spacer()
@@ -61,7 +61,7 @@ struct PatternImportView: View {
 
                     if let message = store.importErrorMessage {
                         Text(message)
-                            .font(.system(size: 13))
+                            .font(YDFont.font(size: 13))
                             .foregroundStyle(YDColor.danger)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(14)
@@ -105,37 +105,29 @@ struct PatternImportView: View {
                 }
             }
         }
-        .fileImporter(
-            isPresented: $isFileImporterPresented,
-            allowedContentTypes: [.pdf, .jpeg, .png],
-            allowsMultipleSelection: false
-        ) { result in
-            switch result {
-            case .success(let urls):
-                guard let url = urls.first else { return }
-                selectedURL = url
-                if title.isEmpty {
-                    title = url.deletingPathExtension().lastPathComponent
+        .sheet(isPresented: $isDocumentPickerPresented) {
+            PatternDocumentPicker(
+                allowedContentTypes: [.pdf, .jpeg, .png],
+                onPick: selectFile,
+                onFailure: {
+                    store.importErrorMessage = "파일을 선택하지 못했습니다. iCloud Drive 또는 파일 앱에서 다시 선택해 주세요."
                 }
-                store.importErrorMessage = nil
-            case .failure:
-                store.importErrorMessage = "파일을 선택하지 못했습니다. 다시 시도해 주세요."
-            }
+            )
         }
     }
 
     private var fileSelection: some View {
         Button {
-            isFileImporterPresented = true
+            isDocumentPickerPresented = true
         } label: {
             VStack(spacing: YDSpacing.x2) {
                 YDIconView(icon: .upload, size: 34)
                     .foregroundStyle(YDColor.wood3)
                 Text("PDF, JPG, JPEG, PNG 선택")
-                    .font(.system(size: 16, weight: .bold))
+                    .font(YDFont.font(size: 16, weight: .bold))
                     .foregroundStyle(YDColor.ink)
-                Text("이미지는 비율과 방향을 유지한 작업용 PDF로 변환합니다.")
-                    .font(.system(size: 12))
+                Text("iCloud Drive, 나의 iPhone, 파일 앱 위치에서 선택할 수 있습니다.")
+                    .font(YDFont.font(size: 12))
                     .foregroundStyle(YDColor.muted)
                     .multilineTextAlignment(.center)
             }
@@ -158,7 +150,7 @@ struct PatternImportView: View {
     ) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
-                .font(.system(size: 12, weight: .heavy))
+                .font(YDFont.font(size: 12, weight: .heavy))
                 .foregroundStyle(YDColor.muted)
             content()
                 .padding(.horizontal, YDSpacing.x3)
@@ -180,6 +172,14 @@ struct PatternImportView: View {
         return "원본 이미지와 변환 PDF를 별도 파일로 저장합니다."
     }
 
+    private func selectFile(_ url: URL) {
+        selectedURL = url
+        if title.isEmpty {
+            title = url.deletingPathExtension().lastPathComponent
+        }
+        store.importErrorMessage = nil
+    }
+
     private func register() {
         guard let selectedURL else { return }
         let draft = PatternImportDraft(
@@ -197,3 +197,57 @@ struct PatternImportView: View {
     }
 }
 
+private struct PatternDocumentPicker: UIViewControllerRepresentable {
+    let allowedContentTypes: [UTType]
+    let onPick: (URL) -> Void
+    let onFailure: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(
+            onPick: onPick,
+            onFailure: onFailure
+        )
+    }
+
+    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
+        let picker = UIDocumentPickerViewController(
+            forOpeningContentTypes: allowedContentTypes,
+            asCopy: true
+        )
+        picker.delegate = context.coordinator
+        picker.allowsMultipleSelection = false
+        picker.shouldShowFileExtensions = true
+        return picker
+    }
+
+    func updateUIViewController(
+        _ uiViewController: UIDocumentPickerViewController,
+        context: Context
+    ) {}
+
+    final class Coordinator: NSObject, UIDocumentPickerDelegate {
+        private let onPick: (URL) -> Void
+        private let onFailure: () -> Void
+
+        init(
+            onPick: @escaping (URL) -> Void,
+            onFailure: @escaping () -> Void
+        ) {
+            self.onPick = onPick
+            self.onFailure = onFailure
+        }
+
+        func documentPicker(
+            _ controller: UIDocumentPickerViewController,
+            didPickDocumentsAt urls: [URL]
+        ) {
+            guard let url = urls.first else {
+                onFailure()
+                return
+            }
+            onPick(url)
+        }
+
+        func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {}
+    }
+}

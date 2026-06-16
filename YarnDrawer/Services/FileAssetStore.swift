@@ -31,6 +31,7 @@ enum PatternImportError: LocalizedError {
 
 actor FileAssetStore {
     private let fileManager: FileManager
+    private let appRootURL: URL
     private let patternsRootURL: URL
 
     init(fileManager: FileManager = .default) {
@@ -39,9 +40,11 @@ actor FileAssetStore {
             for: .applicationSupportDirectory,
             in: .userDomainMask
         )[0]
-        patternsRootURL = applicationSupport
-            .appending(path: "YarnDrawer", directoryHint: .isDirectory)
-            .appending(path: "patterns", directoryHint: .isDirectory)
+        appRootURL = applicationSupport.appending(
+            path: "YarnDrawer",
+            directoryHint: .isDirectory
+        )
+        patternsRootURL = appRootURL.appending(path: "patterns", directoryHint: .isDirectory)
     }
 
     func importPattern(_ draft: PatternImportDraft) throws -> PatternItem {
@@ -165,6 +168,198 @@ actor FileAssetStore {
             return
         }
         try fileManager.removeItem(at: patternDirectory)
+    }
+
+    func reconnectPatternFile(
+        sourceURL: URL,
+        for pattern: PatternItem
+    ) throws -> PatternItem {
+        let didAccess = sourceURL.startAccessingSecurityScopedResource()
+        defer {
+            if didAccess {
+                sourceURL.stopAccessingSecurityScopedResource()
+            }
+        }
+
+        guard fileManager.isReadableFile(atPath: sourceURL.path) else {
+            throw PatternImportError.inaccessibleFile
+        }
+
+        let sourceFileType = try resolveFileType(sourceURL)
+        let patternDirectory = patternsRootURL.appending(
+            path: pattern.id.uuidString,
+            directoryHint: .isDirectory
+        )
+        let tempDirectory = patternDirectory.appending(
+            path: "reconnect-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        let tempOriginalDirectory = tempDirectory.appending(
+            path: "original",
+            directoryHint: .isDirectory
+        )
+        let tempViewDirectory = tempDirectory.appending(
+            path: "view",
+            directoryHint: .isDirectory
+        )
+
+        do {
+            try fileManager.createDirectory(
+                at: tempOriginalDirectory,
+                withIntermediateDirectories: true
+            )
+            try fileManager.createDirectory(
+                at: tempViewDirectory,
+                withIntermediateDirectories: true
+            )
+
+            let fileName = sanitizedFileName(sourceURL.lastPathComponent)
+            let tempOriginalURL = tempOriginalDirectory.appending(path: fileName)
+            try fileManager.copyItem(at: sourceURL, to: tempOriginalURL)
+
+            let pageCount: Int
+            if sourceFileType == .pdf {
+                guard let document = PDFDocument(url: tempOriginalURL), document.pageCount > 0 else {
+                    throw PatternImportError.invalidPDF
+                }
+                pageCount = document.pageCount
+            } else {
+                let tempViewURL = tempViewDirectory.appending(path: "document.pdf")
+                try ImagePDFConverter.convert(imageURL: tempOriginalURL, outputURL: tempViewURL)
+                guard let document = PDFDocument(url: tempViewURL), document.pageCount == 1 else {
+                    throw PatternImportError.pdfConversionFailed
+                }
+                pageCount = document.pageCount
+            }
+
+            try fileManager.createDirectory(
+                at: patternDirectory,
+                withIntermediateDirectories: true
+            )
+            let finalOriginalDirectory = patternDirectory.appending(
+                path: "original",
+                directoryHint: .isDirectory
+            )
+            let finalViewDirectory = patternDirectory.appending(
+                path: "view",
+                directoryHint: .isDirectory
+            )
+            try? fileManager.removeItem(at: finalOriginalDirectory)
+            try? fileManager.removeItem(at: finalViewDirectory)
+            try fileManager.moveItem(at: tempOriginalDirectory, to: finalOriginalDirectory)
+            try fileManager.moveItem(at: tempViewDirectory, to: finalViewDirectory)
+            try? fileManager.removeItem(at: tempDirectory)
+
+            let finalOriginalURL = finalOriginalDirectory.appending(path: fileName)
+            let originalAsset = try makeAsset(
+                purpose: .original,
+                url: finalOriginalURL,
+                root: patternDirectory,
+                mimeType: sourceFileType.mimeType,
+                derivedFromAssetID: nil
+            )
+            let viewAsset: FileAsset
+            if sourceFileType == .pdf {
+                viewAsset = originalAsset
+            } else {
+                viewAsset = try makeAsset(
+                    purpose: .viewPDF,
+                    url: finalViewDirectory.appending(path: "document.pdf"),
+                    root: patternDirectory,
+                    mimeType: UTType.pdf.preferredMIMEType ?? "application/pdf",
+                    derivedFromAssetID: originalAsset.id
+                )
+            }
+
+            var updatedPattern = pattern
+            updatedPattern.sourceFileType = sourceFileType
+            updatedPattern.originalAsset = originalAsset
+            updatedPattern.viewAsset = viewAsset
+            updatedPattern.originalFileName = sourceURL.lastPathComponent
+            updatedPattern.pageCount = pageCount
+            updatedPattern.updatedAt = Date()
+            return updatedPattern
+        } catch {
+            try? fileManager.removeItem(at: tempDirectory)
+            if let importError = error as? PatternImportError {
+                throw importError
+            }
+            throw PatternImportError.storageFailure
+        }
+    }
+
+    func appDataByteSize() -> Int64 {
+        guard fileManager.fileExists(atPath: appRootURL.path) else {
+            return 0
+        }
+        guard let enumerator = fileManager.enumerator(
+            at: appRootURL,
+            includingPropertiesForKeys: [.fileSizeKey, .isRegularFileKey]
+        ) else {
+            return 0
+        }
+        var total: Int64 = 0
+        for case let url as URL in enumerator {
+            guard
+                let values = try? url.resourceValues(
+                    forKeys: [.fileSizeKey, .isRegularFileKey]
+                ),
+                values.isRegularFile == true
+            else {
+                continue
+            }
+            total += Int64(values.fileSize ?? 0)
+        }
+        return total
+    }
+
+    func deleteAllAppData() throws {
+        guard fileManager.fileExists(atPath: appRootURL.path) else {
+            return
+        }
+        try fileManager.removeItem(at: appRootURL)
+    }
+
+    func missingFilePatternIDs(for patterns: [PatternItem]) -> Set<PatternItem.ID> {
+        Set(
+            patterns.compactMap { pattern in
+                guard !pattern.isSample else {
+                    return nil
+                }
+                let assets = [pattern.originalAsset, pattern.viewAsset].compactMap(\.self)
+                guard !assets.isEmpty else {
+                    return pattern.id
+                }
+                let hasMissingFile = assets.contains {
+                    !fileManager.fileExists(
+                        atPath: fileURL(for: $0, patternID: pattern.id).path
+                    )
+                }
+                return hasMissingFile ? pattern.id : nil
+            }
+        )
+    }
+
+    func checksumMismatchPatternIDs(for patterns: [PatternItem]) -> Set<PatternItem.ID> {
+        Set(
+            patterns.compactMap { pattern in
+                guard !pattern.isSample else {
+                    return nil
+                }
+                let assets = [pattern.originalAsset, pattern.viewAsset].compactMap(\.self)
+                guard !assets.isEmpty else {
+                    return nil
+                }
+                let hasMismatch = assets.contains { asset in
+                    let url = fileURL(for: asset, patternID: pattern.id)
+                    guard fileManager.fileExists(atPath: url.path) else {
+                        return false
+                    }
+                    return (try? checksum(url)) != asset.checksumSHA256
+                }
+                return hasMismatch ? pattern.id : nil
+            }
+        )
     }
 
     private func resolveFileType(_ url: URL) throws -> SourceFileType {

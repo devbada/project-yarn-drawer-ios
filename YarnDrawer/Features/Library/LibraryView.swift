@@ -66,11 +66,11 @@ struct LibraryView: View {
             VStack(alignment: .leading, spacing: 18) {
                 VStack(alignment: .leading, spacing: 7) {
                     Text("내 도안")
-                        .font(.system(size: 32, weight: .bold))
+                        .font(YDFont.font(size: 32, weight: .bold))
                         .tracking(-1.1)
                         .foregroundStyle(YDColor.ink)
                     Text("카드를 누르면 마지막 작업 위치로 바로 열립니다.")
-                        .font(.system(size: 14))
+                        .font(YDFont.font(size: 14))
                         .foregroundStyle(YDColor.muted)
                 }
 
@@ -85,13 +85,19 @@ struct LibraryView: View {
                 }
 
                 if filteredPatterns.isEmpty {
-                    EmptyLibraryState()
+                    EmptyLibraryState(
+                        isLibraryEmpty: store.patterns.isEmpty,
+                        hasQuery: !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                        filterTitle: filter.title
+                    )
                 } else {
                     LazyVGrid(columns: columns, spacing: 13) {
                         ForEach(filteredPatterns) { pattern in
                             PatternCardView(
                                 pattern: pattern,
-                                onOpen: { store.selectedPattern = pattern },
+                                isFileMissing: store.missingFilePatternIDs.contains(pattern.id),
+                                hasChecksumMismatch: store.checksumMismatchPatternIDs.contains(pattern.id),
+                                onOpen: { store.openPattern(pattern.id) },
                                 onToggleFavorite: { store.toggleFavorite(pattern.id) },
                                 onShowDetails: { detailPattern = pattern }
                             )
@@ -135,7 +141,7 @@ struct LibraryView: View {
             filter = item
         } label: {
             Text(item == .all ? "\(item.title) \(store.patterns.count)" : item.title)
-                .font(.system(size: 13, weight: .bold))
+                .font(YDFont.font(size: 13, weight: .bold))
                 .foregroundStyle(filter == item ? YDColor.cream0 : YDColor.muted)
                 .padding(.horizontal, 13)
                 .frame(minHeight: 38)
@@ -152,14 +158,22 @@ struct LibraryView: View {
 }
 
 private struct EmptyLibraryState: View {
+    let isLibraryEmpty: Bool
+    let hasQuery: Bool
+    let filterTitle: String
+
     var body: some View {
         VStack(spacing: YDSpacing.x2) {
-            Text("조건에 맞는 도안이 없습니다.")
-                .font(.system(size: 16, weight: .bold))
+            YDIconView(icon: isLibraryEmpty ? .library : .search, size: 30)
+                .foregroundStyle(YDColor.wood3)
+                .padding(.bottom, YDSpacing.x1)
+            Text(title)
+                .font(YDFont.font(size: 16, weight: .bold))
                 .foregroundStyle(YDColor.ink)
-            Text("검색어를 지우거나 다른 필터를 선택해 주세요.")
-                .font(.system(size: 13))
+            Text(description)
+                .font(YDFont.font(size: 13))
                 .foregroundStyle(YDColor.muted)
+                .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 34)
@@ -169,5 +183,19 @@ private struct EmptyLibraryState: View {
             RoundedRectangle(cornerRadius: YDRadius.medium, style: .continuous)
                 .stroke(YDColor.line, style: StrokeStyle(lineWidth: 1, dash: [6]))
         }
+    }
+
+    private var title: String {
+        if isLibraryEmpty {
+            return "보관함이 비어 있습니다."
+        }
+        return hasQuery ? "검색 결과가 없습니다." : "\(filterTitle) 도안이 없습니다."
+    }
+
+    private var description: String {
+        if isLibraryEmpty {
+            return "상단의 도안 등록 버튼으로 PDF나 이미지를 추가해 주세요."
+        }
+        return "검색어를 지우거나 다른 필터를 선택해 주세요."
     }
 }
