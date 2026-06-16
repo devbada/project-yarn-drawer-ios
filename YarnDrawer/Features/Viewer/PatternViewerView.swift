@@ -2,6 +2,7 @@ import SwiftUI
 
 private enum PatternTool: String, CaseIterable, Identifiable {
     case highlight
+    case eraser
     case check
     case note
     case currentRow
@@ -11,15 +12,17 @@ private enum PatternTool: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .highlight: "형광펜"
+        case .eraser: "지우개"
         case .check: "체크"
         case .note: "메모"
         case .currentRow: "현재 줄"
         }
     }
 
-    var icon: YDIcon {
+    var icon: YDIcon? {
         switch self {
         case .highlight: .highlight
+        case .eraser: nil
         case .check: .check
         case .note: .note
         case .currentRow: .row
@@ -53,12 +56,17 @@ struct PatternViewerView: View {
     @State private var protectedAction: ProtectedAction?
     @State private var showsUnsavedAlert = false
     @State private var viewURL: URL?
+    @State private var isDocumentLoading = true
     @State private var toastMessage: String?
     @State private var annotations: [PatternAnnotation] = []
     @State private var pendingAnnotationSaveCount = 0
     @State private var annotationSaveFailed = false
     @State private var initialPageIndex = 0
+    @State private var initialProgress: Double?
     @State private var lastSavedPageIndex = -1
+    @State private var editingNote: PatternAnnotation?
+    @State private var noteText = ""
+    @State private var showsNoteEditor = false
     @State private var selectedHighlightHex = HighlightInk.presets[0].hex
     @State private var customHighlightColor = Color(hex: 0xF9A8D4)
     @AppStorage("highlightFavoriteHexes")
@@ -115,15 +123,24 @@ struct PatternViewerView: View {
             }
         }
         .task {
+            isDocumentLoading = !pattern.isSample
             do {
-                initialPageIndex = try await store.viewerState(for: pattern.id)?
-                    .lastPageIndex ?? 0
+                let savedPageIndex = try await store.viewerState(for: pattern.id)?
+                    .lastPageIndex
                 annotations = try await store.annotations(for: pattern.id)
+                if let restoredProgress {
+                    initialPageIndex = 0
+                    initialProgress = restoredProgress
+                } else {
+                    initialPageIndex = savedPageIndex ?? 0
+                    initialProgress = nil
+                }
             } catch {
                 annotationSaveFailed = true
                 showToast("저장된 작업 상태를 불러오지 못했습니다.")
             }
             viewURL = await store.viewURL(for: pattern)
+            isDocumentLoading = false
         }
         .sheet(item: $activeSheet) { sheet in
             switch sheet {
@@ -154,6 +171,22 @@ struct PatternViewerView: View {
             }
         } message: {
             Text("현재 작업을 저장한 뒤 요청한 동작을 계속합니다.")
+        }
+        .alert("메모", isPresented: $showsNoteEditor) {
+            TextField("메모 내용", text: $noteText)
+            Button("취소", role: .cancel) {
+                clearEditingNote()
+            }
+            if isEditingExistingNote {
+                Button("삭제", role: .destructive) {
+                    deleteEditingNote()
+                }
+            }
+            Button("저장") {
+                saveEditingNote()
+            }
+        } message: {
+            Text("선택한 위치에 메모를 저장합니다.")
         }
     }
 
@@ -194,9 +227,14 @@ struct PatternViewerView: View {
                 annotations: annotations,
                 annotationTool: activePDFAnnotationTool,
                 showsAnnotations: !isOriginalMode,
+                allowsTextSelection: isOriginalMode,
                 highlightHex: selectedHighlightHex,
                 initialPageIndex: initialPageIndex,
+                initialProgress: initialProgress,
                 onAnnotationCreated: addAnnotation,
+                onAnnotationDeleted: { deleteAnnotation($0) },
+                onAnnotationMoved: moveAnnotation,
+                onNoteRequested: beginEditingNote,
                 onPageChanged: saveCurrentPage
             )
                 .overlay(alignment: .top) {
@@ -221,12 +259,18 @@ struct PatternViewerView: View {
                     } else if selectedTool == .check {
                         Text("완료한 위치를 눌러 체크하세요.")
                             .viewerGuideStyle()
+                    } else if selectedTool == .eraser {
+                        Text("지울 표시를 누르세요.")
+                            .viewerGuideStyle()
+                    } else if selectedTool == .note {
+                        Text("메모를 남길 위치를 누르세요.")
+                            .viewerGuideStyle()
                     } else if selectedTool == .currentRow {
                         Text("현재 작업 중인 줄을 누르세요.")
                             .viewerGuideStyle()
                     }
                 }
-        } else {
+        } else if pattern.isSample {
             SamplePatternPaper(
                 selectedTool: selectedTool,
                 isOriginalMode: isOriginalMode,
@@ -235,6 +279,10 @@ struct PatternViewerView: View {
                     showToast(toolResultMessage)
                 }
             )
+        } else if isDocumentLoading {
+            DocumentLoadingView()
+        } else {
+            MissingDocumentView()
         }
     }
 
@@ -245,14 +293,18 @@ struct PatternViewerView: View {
                     selectedTool = tool
                     if tool == .highlight {
                         showToast("PDF 위를 한 손가락으로 드래그해 표시하세요.")
+                    } else if tool == .eraser {
+                        showToast("지울 표시를 누르세요.")
                     } else if tool == .check {
                         showToast("완료한 위치를 눌러 체크하세요.")
+                    } else if tool == .note {
+                        showToast("메모를 남길 위치를 누르세요.")
                     } else if tool == .currentRow {
                         showToast("현재 작업 중인 줄을 누르세요.")
                     }
                 } label: {
                     VStack(spacing: 3) {
-                        YDIconView(icon: tool.icon, size: 22)
+                        toolIcon(tool)
                         Text(tool.title)
                             .font(.system(size: 10, weight: .bold))
                     }
@@ -290,12 +342,36 @@ struct PatternViewerView: View {
         }
     }
 
+    @ViewBuilder
+    private func toolIcon(_ tool: PatternTool) -> some View {
+        if let icon = tool.icon {
+            YDIconView(icon: icon, size: 22)
+        } else {
+            Image(systemName: "eraser")
+                .font(.system(size: 19, weight: .bold))
+                .frame(width: 22, height: 22)
+        }
+    }
+
     private var highlightColorPicker: some View {
         VStack(spacing: 2) {
             HStack(spacing: YDSpacing.x2) {
                 Text("형광펜 팔레트")
                     .font(.system(size: 12, weight: .bold))
                     .foregroundStyle(YDColor.muted)
+                Button {
+                    undoLastHighlight()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.uturn.backward")
+                        Text("실행 취소")
+                    }
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(hasHighlightAnnotations ? YDColor.yarn4 : YDColor.muted)
+                    .frame(minHeight: YDLayout.minimumTouchTarget)
+                }
+                .buttonStyle(.plain)
+                .disabled(!hasHighlightAnnotations)
                 Spacer()
                 ColorPicker(
                     "사용자 색상",
@@ -391,6 +467,22 @@ struct PatternViewerView: View {
         return (favoriteHighlightColors + HighlightInk.presets).filter {
             seen.insert($0.hex).inserted
         }
+    }
+
+    private var hasHighlightAnnotations: Bool {
+        annotations.contains { $0.type == .highlight }
+    }
+
+    private func undoLastHighlight() {
+        guard
+            let annotation = annotations
+                .filter({ $0.type == .highlight })
+                .max(by: { $0.createdAt < $1.createdAt })
+        else {
+            showToast("되돌릴 형광펜 표시가 없습니다.")
+            return
+        }
+        deleteAnnotation(annotation, successMessage: "마지막 형광펜 표시를 되돌렸습니다.")
     }
 
     private func addFavoriteHighlightColor() {
@@ -497,17 +589,54 @@ struct PatternViewerView: View {
         }
         return switch selectedTool {
         case .highlight: .highlight
+        case .eraser: .eraser
         case .check: .check
         case .currentRow: .currentRow
-        case .note: nil
+        case .note: .note
         }
+    }
+
+    private var restoredProgress: Double? {
+        let progress = latestCheckProgress ?? pattern.progress
+        guard progress > 0 else {
+            return nil
+        }
+        return min(max(progress, 0), 1)
+    }
+
+    private var latestCheckProgress: Double? {
+        guard pattern.pageCount > 0 else {
+            return nil
+        }
+        return latestCheckAnnotation.map {
+            progress(for: $0)
+        }
+    }
+
+    private var latestCheckAnnotation: PatternAnnotation? {
+        annotations
+            .filter { $0.type == .check }
+            .max { $0.createdAt < $1.createdAt }
+    }
+
+    private func progress(for annotation: PatternAnnotation) -> Double {
+        let pageCount = max(1, pattern.pageCount)
+        let pageProgress = min(
+            max(1 - annotation.bounds.centerY, 0),
+            1
+        )
+        let rawProgress = (
+            Double(annotation.pageIndex) + pageProgress
+        ) / Double(pageCount)
+        return min(max(rawProgress, 0), 1)
     }
 
     private var toolResultMessage: String {
         switch selectedTool {
         case .highlight: "형광펜 표시를 변경했습니다."
+        case .eraser: "표시를 지웠습니다."
         case .check: "완료 체크를 변경했습니다."
-        case .note: "이 줄에 메모를 연결했습니다."
+        case .note: "메모를 변경했습니다."
         case .currentRow: "현재 작업 줄을 옮겼습니다."
         }
     }
@@ -563,6 +692,9 @@ struct PatternViewerView: View {
                 } else {
                     try await store.addAnnotation(annotation, to: pattern.id)
                 }
+                if annotation.type == .check {
+                    try await store.updateProgress(progress(for: annotation), for: pattern.id)
+                }
                 pendingAnnotationSaveCount = max(0, pendingAnnotationSaveCount - 1)
                 if pendingAnnotationSaveCount == 0 {
                     isDirty = false
@@ -573,6 +705,141 @@ struct PatternViewerView: View {
                 annotationSaveFailed = true
                 isDirty = true
                 showToast("\(annotation.type.saveTitle)을 저장하지 못했습니다.")
+            }
+        }
+    }
+
+    private func deleteAnnotation(
+        _ annotation: PatternAnnotation,
+        successMessage: String? = nil
+    ) {
+        annotations.removeAll { $0.id == annotation.id }
+        isDirty = true
+        annotationSaveFailed = false
+        pendingAnnotationSaveCount += 1
+        showToast("\(annotation.type.saveTitle)을 삭제합니다.")
+
+        Task {
+            do {
+                try await store.saveAnnotations(annotations, for: pattern.id)
+                if annotation.type == .check {
+                    try await store.updateProgress(latestCheckProgress ?? 0, for: pattern.id)
+                }
+                pendingAnnotationSaveCount = max(0, pendingAnnotationSaveCount - 1)
+                if pendingAnnotationSaveCount == 0 {
+                    isDirty = false
+                    showToast(successMessage ?? "\(annotation.type.saveTitle)을 삭제했습니다.")
+                }
+            } catch {
+                pendingAnnotationSaveCount = max(0, pendingAnnotationSaveCount - 1)
+                annotationSaveFailed = true
+                isDirty = true
+                showToast("\(annotation.type.saveTitle)을 삭제하지 못했습니다.")
+            }
+        }
+    }
+
+    private func moveAnnotation(_ annotation: PatternAnnotation) {
+        guard let index = annotations.firstIndex(where: { $0.id == annotation.id }) else {
+            return
+        }
+        annotations[index] = annotation
+        isDirty = true
+        annotationSaveFailed = false
+        pendingAnnotationSaveCount += 1
+        showToast("\(annotation.type.saveTitle)을 이동합니다.")
+
+        Task {
+            do {
+                try await store.saveAnnotations(annotations, for: pattern.id)
+                if annotation.type == .check {
+                    try await store.updateProgress(progress(for: annotation), for: pattern.id)
+                }
+                pendingAnnotationSaveCount = max(0, pendingAnnotationSaveCount - 1)
+                if pendingAnnotationSaveCount == 0 {
+                    isDirty = false
+                    showToast("\(annotation.type.saveTitle)을 이동했습니다.")
+                }
+            } catch {
+                pendingAnnotationSaveCount = max(0, pendingAnnotationSaveCount - 1)
+                annotationSaveFailed = true
+                isDirty = true
+                showToast("\(annotation.type.saveTitle)을 이동하지 못했습니다.")
+            }
+        }
+    }
+
+    private var isEditingExistingNote: Bool {
+        guard let editingNote else {
+            return false
+        }
+        return annotations.contains { $0.id == editingNote.id }
+    }
+
+    private func beginEditingNote(_ annotation: PatternAnnotation) {
+        editingNote = annotation
+        noteText = annotation.noteText ?? ""
+        showsNoteEditor = true
+    }
+
+    private func clearEditingNote() {
+        editingNote = nil
+        noteText = ""
+    }
+
+    private func saveEditingNote() {
+        guard var note = editingNote else {
+            return
+        }
+        let trimmedText = noteText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedText.isEmpty else {
+            showToast("메모 내용을 입력해 주세요.")
+            return
+        }
+
+        note.noteText = trimmedText
+        if let index = annotations.firstIndex(where: { $0.id == note.id }) {
+            annotations[index] = note
+        } else {
+            annotations.append(note)
+        }
+        clearEditingNote()
+        saveAnnotationSnapshot(
+            successMessage: "메모를 저장했습니다.",
+            failureMessage: "메모를 저장하지 못했습니다."
+        )
+    }
+
+    private func deleteEditingNote() {
+        guard let note = editingNote else {
+            return
+        }
+        clearEditingNote()
+        deleteAnnotation(note)
+    }
+
+    private func saveAnnotationSnapshot(
+        successMessage: String,
+        failureMessage: String
+    ) {
+        isDirty = true
+        annotationSaveFailed = false
+        pendingAnnotationSaveCount += 1
+        showToast("메모를 자동 저장합니다.")
+
+        Task {
+            do {
+                try await store.saveAnnotations(annotations, for: pattern.id)
+                pendingAnnotationSaveCount = max(0, pendingAnnotationSaveCount - 1)
+                if pendingAnnotationSaveCount == 0 {
+                    isDirty = false
+                    showToast(successMessage)
+                }
+            } catch {
+                pendingAnnotationSaveCount = max(0, pendingAnnotationSaveCount - 1)
+                annotationSaveFailed = true
+                isDirty = true
+                showToast(failureMessage)
             }
         }
     }
@@ -623,6 +890,7 @@ private extension PatternAnnotationType {
         switch self {
         case .highlight: "형광펜 표시"
         case .check: "체크"
+        case .note: "메모"
         case .currentRow: "현재 줄"
         }
     }
@@ -671,6 +939,41 @@ private struct SamplePatternLine: Identifiable {
     var checked = false
     var highlighted = false
     var current = false
+}
+
+private struct DocumentLoadingView: View {
+    var body: some View {
+        VStack(spacing: YDSpacing.x3) {
+            ProgressView()
+                .tint(YDColor.yarn4)
+            Text("도안을 여는 중입니다.")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(YDColor.ink)
+            Text("저장된 페이지와 표시를 복원하고 있습니다.")
+                .font(.system(size: 12))
+                .foregroundStyle(YDColor.muted)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(hex: 0xDED5C4))
+    }
+}
+
+private struct MissingDocumentView: View {
+    var body: some View {
+        VStack(spacing: YDSpacing.x3) {
+            YDIconView(icon: .storage, size: 34)
+                .foregroundStyle(YDColor.wood3)
+            Text("작업용 PDF를 열 수 없습니다.")
+                .font(.system(size: 15, weight: .bold))
+                .foregroundStyle(YDColor.ink)
+            Text("파일 누락 감지와 재연결은 남은 구현 항목입니다.")
+                .font(.system(size: 12))
+                .foregroundStyle(YDColor.muted)
+        }
+        .padding(YDSpacing.x6)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(hex: 0xDED5C4))
+    }
 }
 
 private struct SamplePatternPaper: View {
@@ -749,10 +1052,14 @@ private struct SamplePatternPaper: View {
         switch selectedTool {
         case .highlight:
             lines[index].highlighted.toggle()
+        case .eraser:
+            lines[index].highlighted = false
+            lines[index].checked = false
+            lines[index].current = false
         case .check:
             lines[index].checked.toggle()
         case .note:
-            break
+            return
         case .currentRow:
             for lineIndex in lines.indices {
                 lines[lineIndex].current = lineIndex == index

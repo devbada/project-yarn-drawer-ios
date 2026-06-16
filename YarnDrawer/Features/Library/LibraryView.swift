@@ -91,7 +91,7 @@ struct LibraryView: View {
                         ForEach(filteredPatterns) { pattern in
                             PatternCardView(
                                 pattern: pattern,
-                                onOpen: { store.selectedPattern = pattern },
+                                onOpen: { store.openPattern(pattern.id) },
                                 onToggleFavorite: { store.toggleFavorite(pattern.id) },
                                 onShowDetails: { detailPattern = pattern }
                             )

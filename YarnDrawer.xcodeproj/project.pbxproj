@@ -281,11 +281,12 @@
 			};
 			buildConfigurationList = 6B69AACBB45A12DB13EB97E2 /* Build configuration list for PBXProject "YarnDrawer" */;
 			compatibilityVersion = "Xcode 14.0";
-			developmentRegion = en;
+			developmentRegion = ko;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				Base,
 				en,
+				ko,
 			);
 			mainGroup = 93881F4BA765586D7ADF2BE3;
 			minimizedProjectReferenceProxies = 1;

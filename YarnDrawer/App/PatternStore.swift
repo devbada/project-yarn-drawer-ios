@@ -63,7 +63,8 @@ final class PatternStore: ObservableObject {
         defer { isImporting = false }
 
         do {
-            let pattern = try await fileAssetStore.importPattern(draft)
+            var pattern = try await fileAssetStore.importPattern(draft)
+            pattern.lastOpenedAt = Date()
             patterns.append(pattern)
             try await persist()
             selectedPattern = pattern
@@ -88,6 +89,22 @@ final class PatternStore: ObservableObject {
 
     func pattern(id: PatternItem.ID) -> PatternItem? {
         patterns.first { $0.id == id }
+    }
+
+    func openPattern(_ id: PatternItem.ID) {
+        guard let index = patterns.firstIndex(where: { $0.id == id }) else {
+            return
+        }
+        patterns[index].lastOpenedAt = Date()
+        patterns[index].updatedAt = Date()
+        selectedPattern = patterns[index]
+
+        guard !patterns[index].isSample else {
+            return
+        }
+        Task {
+            try? await persist()
+        }
     }
 
     func updatePattern(_ pattern: PatternItem) async throws {
@@ -117,6 +134,23 @@ final class PatternStore: ObservableObject {
 
         if selectedPattern?.id == updatedPattern.id {
             selectedPattern = updatedPattern
+        }
+    }
+
+    func updateProgress(_ progress: Double, for id: PatternItem.ID) async throws {
+        guard let index = patterns.firstIndex(where: { $0.id == id }) else {
+            throw PatternStoreError.patternNotFound
+        }
+        guard !patterns[index].isSample else {
+            return
+        }
+
+        patterns[index].progress = min(max(progress, 0), 1)
+        patterns[index].updatedAt = Date()
+        try await persist()
+
+        if selectedPattern?.id == id {
+            selectedPattern = patterns[index]
         }
     }
 

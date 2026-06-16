@@ -45,13 +45,16 @@ struct FileAsset: Codable, Identifiable, Hashable {
 enum PatternAnnotationType: String, Codable {
     case highlight
     case check
+    case note
     case currentRow
 }
 
 enum PDFAnnotationTool {
     case highlight
     case check
+    case note
     case currentRow
+    case eraser
 }
 
 enum HighlightColor: String, Codable, CaseIterable, Identifiable {
@@ -130,6 +133,10 @@ struct NormalizedRect: Codable, Hashable {
             height: height * pageBounds.height
         )
     }
+
+    var centerY: Double {
+        y + (height / 2)
+    }
 }
 
 struct NormalizedPoint: Codable, Hashable {
@@ -166,6 +173,7 @@ struct PatternAnnotation: Codable, Identifiable, Hashable {
     let points: [NormalizedPoint]?
     let normalizedLineWidth: Double?
     let createdAt: Date
+    var noteText: String? = nil
 
     var resolvedHighlightColor: HighlightColor {
         highlightColor ?? .yellow

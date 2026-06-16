@@ -3,6 +3,11 @@ name: YarnDrawer
 # 이 파일로 YarnDrawer.xcodeproj를 재생성하지 않는다.
 options:
   bundleIdPrefix: com.example
+  developmentLanguage: ko
+  knownRegions:
+    - Base
+    - en
+    - ko
   deploymentTarget:
     iOS: "17.0"
   xcodeVersion: "26.0"

@@ -19,6 +19,7 @@ struct PatternDetailsView: View {
     @State private var needleSize = ""
     @State private var hookSize = ""
     @State private var notes = ""
+    @State private var progress = 0.0
     @State private var errorMessage: String?
     @State private var showsDeleteConfirmation = false
     @State private var isSaving = false
@@ -71,6 +72,43 @@ struct PatternDetailsView: View {
                             HStack(spacing: YDSpacing.x2) {
                                 numberField("대바늘 mm", text: $needleSize)
                                 numberField("코바늘 mm", text: $hookSize)
+                            }
+                        }
+
+                        section("진행률") {
+                            VStack(alignment: .leading, spacing: YDSpacing.x3) {
+                                HStack {
+                                    Text(progress >= 1 ? "완료" : "\(Int(progress * 100))%")
+                                        .font(.system(size: 22, weight: .heavy))
+                                        .foregroundStyle(YDColor.yarn4)
+                                    Spacer()
+                                    Text("카드 진행 막대에 반영")
+                                        .font(.system(size: 12, weight: .bold))
+                                        .foregroundStyle(YDColor.muted)
+                                }
+
+                                Slider(value: $progress, in: 0...1, step: 0.01)
+                                    .tint(YDColor.yarn4)
+                                    .accessibilityLabel("진행률")
+                                    .accessibilityValue("\(Int(progress * 100))%")
+
+                                HStack(spacing: YDSpacing.x2) {
+                                    ForEach([0.0, 0.25, 0.5, 0.75, 1.0], id: \.self) { value in
+                                        Button(value >= 1 ? "완료" : "\(Int(value * 100))%") {
+                                            progress = value
+                                        }
+                                        .font(.system(size: 12, weight: .bold))
+                                        .foregroundStyle(progress == value ? YDColor.cream0 : YDColor.muted)
+                                        .frame(maxWidth: .infinity)
+                                        .frame(minHeight: 34)
+                                        .background(progress == value ? YDColor.ink : YDColor.cream0)
+                                        .clipShape(Capsule())
+                                        .overlay {
+                                            Capsule()
+                                                .stroke(YDColor.line, lineWidth: 1)
+                                        }
+                                    }
+                                }
                             }
                         }
 
@@ -268,6 +306,7 @@ struct PatternDetailsView: View {
         needleSize = pattern.materialInfo?.needleSizeMM.editText ?? ""
         hookSize = pattern.materialInfo?.hookSizeMM.editText ?? ""
         notes = pattern.notes ?? ""
+        progress = min(max(pattern.progress, 0), 1)
     }
 
     private func save() {
@@ -296,6 +335,7 @@ struct PatternDetailsView: View {
             )
             updatedPattern.materialInfo = material.isEmpty ? nil : material
             updatedPattern.notes = notes.nilIfBlank
+            updatedPattern.progress = min(max(progress, 0), 1)
 
             isSaving = true
             errorMessage = nil
