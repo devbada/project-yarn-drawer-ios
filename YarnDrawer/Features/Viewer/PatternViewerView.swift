@@ -63,6 +63,8 @@ struct PatternViewerView: View {
     @State private var annotationSaveFailed = false
     @State private var initialPageIndex = 0
     @State private var initialProgress: Double?
+    @State private var initialScaleFactor: Double?
+    @State private var currentScaleFactor: Double?
     @State private var lastSavedPageIndex = -1
     @State private var editingNote: PatternAnnotation?
     @State private var noteText = ""
@@ -140,14 +142,15 @@ struct PatternViewerView: View {
         .task {
             isDocumentLoading = !pattern.isSample
             do {
-                let savedPageIndex = try await store.viewerState(for: pattern.id)?
-                    .lastPageIndex
+                let viewerState = try await store.viewerState(for: pattern.id)
                 annotations = try await store.annotations(for: pattern.id)
+                initialScaleFactor = viewerState?.scaleFactor
+                currentScaleFactor = viewerState?.scaleFactor
                 if let restoredProgress {
                     initialPageIndex = 0
                     initialProgress = restoredProgress
                 } else {
-                    initialPageIndex = savedPageIndex ?? 0
+                    initialPageIndex = viewerState?.lastPageIndex ?? 0
                     initialProgress = nil
                 }
             } catch {
@@ -246,11 +249,13 @@ struct PatternViewerView: View {
                 highlightHex: selectedHighlightHex,
                 initialPageIndex: initialPageIndex,
                 initialProgress: initialProgress,
+                initialScaleFactor: initialScaleFactor,
                 onAnnotationCreated: addAnnotation,
                 onAnnotationDeleted: { deleteAnnotation($0) },
                 onAnnotationMoved: moveAnnotation,
                 onNoteRequested: beginEditingNote,
-                onPageChanged: saveCurrentPage
+                onPageChanged: saveCurrentPage,
+                onScaleChanged: saveCurrentScale
             )
                 .overlay(alignment: .top) {
                     if isOriginalMode {
@@ -960,7 +965,22 @@ struct PatternViewerView: View {
         }
         lastSavedPageIndex = pageIndex
         Task {
-            try? await store.saveViewerPage(pageIndex, for: pattern.id)
+            try? await store.saveViewerState(
+                pageIndex: pageIndex,
+                scaleFactor: currentScaleFactor,
+                for: pattern.id
+            )
+        }
+    }
+
+    private func saveCurrentScale(_ scaleFactor: Double) {
+        currentScaleFactor = scaleFactor
+        Task {
+            try? await store.saveViewerState(
+                pageIndex: max(0, lastSavedPageIndex),
+                scaleFactor: scaleFactor,
+                for: pattern.id
+            )
         }
     }
 

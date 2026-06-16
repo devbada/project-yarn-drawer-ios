@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct PatternDetailsView: View {
     @EnvironmentObject private var store: PatternStore
@@ -22,6 +23,7 @@ struct PatternDetailsView: View {
     @State private var progress = 0.0
     @State private var errorMessage: String?
     @State private var showsDeleteConfirmation = false
+    @State private var showsReconnectPicker = false
     @State private var isSaving = false
     @State private var didLoad = false
 
@@ -202,6 +204,15 @@ struct PatternDetailsView: View {
         } message: {
             Text(deleteMessage)
         }
+        .sheet(isPresented: $showsReconnectPicker) {
+            PatternReconnectDocumentPicker(
+                allowedContentTypes: [.pdf, .jpeg, .png],
+                onPick: reconnectFile,
+                onFailure: {
+                    errorMessage = "파일을 다시 선택하지 못했습니다."
+                }
+            )
+        }
     }
 
     private var pattern: PatternItem? {
@@ -280,6 +291,31 @@ struct PatternDetailsView: View {
             informationRow("파일명", pattern.originalFileName)
             informationRow("형식", pattern.sourceFileType.rawValue.uppercased())
             informationRow("페이지", "\(pattern.pageCount)쪽")
+            if store.missingFilePatternIDs.contains(pattern.id) {
+                Text("원본 또는 작업용 PDF 파일이 누락되었습니다.")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(YDColor.danger)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, YDSpacing.x1)
+            } else if store.checksumMismatchPatternIDs.contains(pattern.id) {
+                Text("저장된 파일 checksum이 등록 시점과 다릅니다. 파일을 다시 선택해 복구할 수 있습니다.")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(YDColor.danger)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, YDSpacing.x1)
+            }
+            if !pattern.isSample {
+                Button("파일 다시 선택") {
+                    showsReconnectPicker = true
+                }
+                .font(.system(size: 13, weight: .heavy))
+                .foregroundStyle(YDColor.yarn4)
+                .frame(maxWidth: .infinity)
+                .frame(minHeight: 42)
+                .background(YDColor.surfaceGreen)
+                .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
+                .padding(.top, YDSpacing.x2)
+            }
         }
         .padding(YDSpacing.x4)
         .ydSurfaceCard()
@@ -377,6 +413,22 @@ struct PatternDetailsView: View {
         }
     }
 
+    private func reconnectFile(_ url: URL) {
+        isSaving = true
+        errorMessage = nil
+        Task {
+            defer { isSaving = false }
+            do {
+                try await store.reconnectPatternFile(sourceURL: url, for: patternID)
+                didLoad = false
+                loadPatternIfNeeded()
+                errorMessage = nil
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
     private var normalizedTags: [String] {
         var seen = Set<String>()
         return tagsText
@@ -427,5 +479,57 @@ private extension String {
     var nilIfBlank: String? {
         let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
+    }
+}
+
+private struct PatternReconnectDocumentPicker: UIViewControllerRepresentable {
+    let allowedContentTypes: [UTType]
+    let onPick: (URL) -> Void
+    let onFailure: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onPick: onPick, onFailure: onFailure)
+    }
+
+    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
+        let picker = UIDocumentPickerViewController(
+            forOpeningContentTypes: allowedContentTypes,
+            asCopy: true
+        )
+        picker.delegate = context.coordinator
+        picker.allowsMultipleSelection = false
+        picker.shouldShowFileExtensions = true
+        return picker
+    }
+
+    func updateUIViewController(
+        _ uiViewController: UIDocumentPickerViewController,
+        context: Context
+    ) {}
+
+    final class Coordinator: NSObject, UIDocumentPickerDelegate {
+        private let onPick: (URL) -> Void
+        private let onFailure: () -> Void
+
+        init(
+            onPick: @escaping (URL) -> Void,
+            onFailure: @escaping () -> Void
+        ) {
+            self.onPick = onPick
+            self.onFailure = onFailure
+        }
+
+        func documentPicker(
+            _ controller: UIDocumentPickerViewController,
+            didPickDocumentsAt urls: [URL]
+        ) {
+            guard let url = urls.first else {
+                onFailure()
+                return
+            }
+            onPick(url)
+        }
+
+        func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {}
     }
 }

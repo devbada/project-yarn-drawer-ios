@@ -10,11 +10,13 @@ struct PDFKitView: UIViewRepresentable {
     let highlightHex: String
     let initialPageIndex: Int
     let initialProgress: Double?
+    let initialScaleFactor: Double?
     let onAnnotationCreated: (PatternAnnotation) -> Void
     let onAnnotationDeleted: (PatternAnnotation) -> Void
     let onAnnotationMoved: (PatternAnnotation) -> Void
     let onNoteRequested: (PatternAnnotation) -> Void
     let onPageChanged: (Int) -> Void
+    let onScaleChanged: (Double) -> Void
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self)
@@ -92,7 +94,8 @@ struct PDFKitView: UIViewRepresentable {
             context.coordinator.loadDocument(
                 from: url,
                 initialPageIndex: initialPageIndex,
-                initialProgress: initialProgress
+                initialProgress: initialProgress,
+                initialScaleFactor: initialScaleFactor
             )
         }
 
@@ -137,6 +140,7 @@ struct PDFKitView: UIViewRepresentable {
         private var showsAnnotations: Bool
         private var visibleOverlays: [Int: HighlightPageOverlayView] = [:]
         private var isRestoringPage = false
+        private var lastSavedScaleFactor: Double?
 
         init(parent: PDFKitView) {
             self.parent = parent
@@ -158,12 +162,19 @@ struct PDFKitView: UIViewRepresentable {
                 name: Notification.Name.PDFViewPageChanged,
                 object: pdfView
             )
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(handleScaleChanged),
+                name: Notification.Name.PDFViewScaleChanged,
+                object: pdfView
+            )
         }
 
         func loadDocument(
             from url: URL,
             initialPageIndex: Int,
-            initialProgress: Double?
+            initialProgress: Double?,
+            initialScaleFactor: Double?
         ) {
             guard
                 let pdfView,
@@ -192,6 +203,7 @@ struct PDFKitView: UIViewRepresentable {
                 self.applyRestore(
                     page: page,
                     pageProgress: restoreTarget.pageProgress,
+                    scaleFactor: initialScaleFactor,
                     attempt: 0
                 )
             }
@@ -200,6 +212,7 @@ struct PDFKitView: UIViewRepresentable {
         private func applyRestore(
             page: PDFPage,
             pageProgress: CGFloat?,
+            scaleFactor: Double?,
             attempt: Int
         ) {
             guard let pdfView else {
@@ -227,6 +240,14 @@ struct PDFKitView: UIViewRepresentable {
             } else {
                 pdfView.go(to: page)
             }
+            if let scaleFactor {
+                let scale = min(
+                    max(CGFloat(scaleFactor), pdfView.minScaleFactor),
+                    pdfView.maxScaleFactor
+                )
+                pdfView.scaleFactor = scale
+                lastSavedScaleFactor = Double(scale)
+            }
 
             guard attempt < 2 else {
                 isRestoringPage = false
@@ -237,6 +258,7 @@ struct PDFKitView: UIViewRepresentable {
                 self?.applyRestore(
                     page: page,
                     pageProgress: pageProgress,
+                    scaleFactor: scaleFactor,
                     attempt: attempt + 1
                 )
             }
@@ -353,6 +375,21 @@ struct PDFKitView: UIViewRepresentable {
                 return
             }
             parent.onPageChanged(pageIndex)
+        }
+
+        @objc private func handleScaleChanged() {
+            guard
+                !isRestoringPage,
+                let pdfView
+            else {
+                return
+            }
+            let scale = Double(pdfView.scaleFactor)
+            guard abs((lastSavedScaleFactor ?? -1) - scale) > 0.01 else {
+                return
+            }
+            lastSavedScaleFactor = scale
+            parent.onScaleChanged(scale)
         }
 
         func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {

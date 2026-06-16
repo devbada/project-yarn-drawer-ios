@@ -24,6 +24,7 @@ enum PatternStoreError: LocalizedError {
 final class PatternStore: ObservableObject {
     @Published private(set) var patterns: [PatternItem] = PatternItem.samples
     @Published private(set) var missingFilePatternIDs: Set<PatternItem.ID> = []
+    @Published private(set) var checksumMismatchPatternIDs: Set<PatternItem.ID> = []
     @Published var selectedPattern: PatternItem?
     @Published var isImporting = false
     @Published var importErrorMessage: String?
@@ -192,6 +193,30 @@ final class PatternStore: ObservableObject {
         try? await viewerStateRepository.delete(patternID: id)
     }
 
+    func reconnectPatternFile(
+        sourceURL: URL,
+        for id: PatternItem.ID
+    ) async throws {
+        guard let index = patterns.firstIndex(where: { $0.id == id }) else {
+            throw PatternStoreError.patternNotFound
+        }
+        guard !patterns[index].isSample else {
+            throw PatternStoreError.sampleEditNotAllowed
+        }
+
+        let updatedPattern = try await fileAssetStore.reconnectPatternFile(
+            sourceURL: sourceURL,
+            for: patterns[index]
+        )
+        patterns[index] = updatedPattern
+        try await persist()
+        await refreshMissingFileStatus()
+
+        if selectedPattern?.id == id {
+            selectedPattern = updatedPattern
+        }
+    }
+
     func localStorageByteSize() async -> Int64 {
         await fileAssetStore.appDataByteSize()
     }
@@ -200,6 +225,7 @@ final class PatternStore: ObservableObject {
         try await fileAssetStore.deleteAllAppData()
         patterns = PatternItem.samples
         missingFilePatternIDs = []
+        checksumMismatchPatternIDs = []
         selectedPattern = nil
         importErrorMessage = nil
     }
@@ -233,10 +259,15 @@ final class PatternStore: ObservableObject {
         try await viewerStateRepository.load(patternID: patternID)
     }
 
-    func saveViewerPage(_ pageIndex: Int, for patternID: PatternItem.ID) async throws {
+    func saveViewerState(
+        pageIndex: Int,
+        scaleFactor: Double?,
+        for patternID: PatternItem.ID
+    ) async throws {
         let state = PatternViewerState(
             patternID: patternID,
             lastPageIndex: max(0, pageIndex),
+            scaleFactor: scaleFactor.map { min(max($0, 0.25), 8) },
             updatedAt: Date()
         )
         try await viewerStateRepository.save(state)
@@ -261,5 +292,6 @@ final class PatternStore: ObservableObject {
 
     private func refreshMissingFileStatus() async {
         missingFilePatternIDs = await fileAssetStore.missingFilePatternIDs(for: patterns)
+        checksumMismatchPatternIDs = await fileAssetStore.checksumMismatchPatternIDs(for: patterns)
     }
 }

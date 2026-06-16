@@ -199,6 +199,7 @@ struct PatternAnnotation: Codable, Identifiable, Hashable {
 struct PatternViewerState: Codable, Equatable {
     let patternID: UUID
     var lastPageIndex: Int
+    var scaleFactor: Double?
     var updatedAt: Date
 }
 

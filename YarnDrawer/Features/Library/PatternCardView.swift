@@ -3,6 +3,7 @@ import SwiftUI
 struct PatternCardView: View {
     let pattern: PatternItem
     var isFileMissing = false
+    var hasChecksumMismatch = false
     let onOpen: () -> Void
     let onToggleFavorite: () -> Void
     let onShowDetails: () -> Void
@@ -31,8 +32,8 @@ struct PatternCardView: View {
                             .lineLimit(1)
                             .padding(.top, 6)
 
-                        if isFileMissing {
-                            Text("파일 누락")
+                        if isFileMissing || hasChecksumMismatch {
+                            Text(isFileMissing ? "파일 누락" : "파일 변경됨")
                                 .font(.system(size: 11, weight: .heavy))
                                 .foregroundStyle(YDColor.danger)
                                 .padding(.horizontal, 8)

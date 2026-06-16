@@ -13,6 +13,7 @@ final class ViewerStateRepositoryTests: XCTestCase {
         let state = PatternViewerState(
             patternID: UUID(),
             lastPageIndex: 4,
+            scaleFactor: 1.75,
             updatedAt: Date(timeIntervalSince1970: 1_000)
         )
 

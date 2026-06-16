@@ -96,6 +96,7 @@ struct LibraryView: View {
                             PatternCardView(
                                 pattern: pattern,
                                 isFileMissing: store.missingFilePatternIDs.contains(pattern.id),
+                                hasChecksumMismatch: store.checksumMismatchPatternIDs.contains(pattern.id),
                                 onOpen: { store.openPattern(pattern.id) },
                                 onToggleFavorite: { store.toggleFavorite(pattern.id) },
                                 onShowDetails: { detailPattern = pattern }
