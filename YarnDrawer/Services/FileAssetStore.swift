@@ -1,6 +1,7 @@
 import CryptoKit
 import Foundation
 import PDFKit
+import UIKit
 import UniformTypeIdentifiers
 
 enum PatternImportError: LocalizedError {
@@ -74,6 +75,10 @@ actor FileAssetStore {
             path: "view",
             directoryHint: .isDirectory
         )
+        let thumbnailDirectory = patternDirectory.appending(
+            path: "thumbnail",
+            directoryHint: .isDirectory
+        )
 
         do {
             try fileManager.createDirectory(
@@ -82,6 +87,10 @@ actor FileAssetStore {
             )
             try fileManager.createDirectory(
                 at: viewDirectory,
+                withIntermediateDirectories: true
+            )
+            try fileManager.createDirectory(
+                at: thumbnailDirectory,
                 withIntermediateDirectories: true
             )
 
@@ -123,6 +132,11 @@ actor FileAssetStore {
                 pageCount = document.pageCount
             }
 
+            try makeThumbnail(
+                sourceURL: sourceFileType == .pdf ? originalURL : viewDirectory.appending(path: "document.pdf"),
+                outputURL: thumbnailDirectory.appending(path: "card.png")
+            )
+
             let now = Date()
             return PatternItem(
                 id: patternID,
@@ -157,6 +171,14 @@ actor FileAssetStore {
         patternsRootURL
             .appending(path: patternID.uuidString, directoryHint: .isDirectory)
             .appending(path: asset.storageKey)
+    }
+
+    func thumbnailURL(for pattern: PatternItem) -> URL? {
+        guard !pattern.isSample else {
+            return nil
+        }
+        let url = thumbnailURL(patternID: pattern.id)
+        return fileManager.fileExists(atPath: url.path) ? url : nil
     }
 
     func deletePatternFiles(patternID: UUID) throws {
@@ -202,6 +224,10 @@ actor FileAssetStore {
             path: "view",
             directoryHint: .isDirectory
         )
+        let tempThumbnailDirectory = tempDirectory.appending(
+            path: "thumbnail",
+            directoryHint: .isDirectory
+        )
 
         do {
             try fileManager.createDirectory(
@@ -210,6 +236,10 @@ actor FileAssetStore {
             )
             try fileManager.createDirectory(
                 at: tempViewDirectory,
+                withIntermediateDirectories: true
+            )
+            try fileManager.createDirectory(
+                at: tempThumbnailDirectory,
                 withIntermediateDirectories: true
             )
 
@@ -232,6 +262,11 @@ actor FileAssetStore {
                 pageCount = document.pageCount
             }
 
+            try makeThumbnail(
+                sourceURL: sourceFileType == .pdf ? tempOriginalURL : tempViewDirectory.appending(path: "document.pdf"),
+                outputURL: tempThumbnailDirectory.appending(path: "card.png")
+            )
+
             try fileManager.createDirectory(
                 at: patternDirectory,
                 withIntermediateDirectories: true
@@ -244,10 +279,16 @@ actor FileAssetStore {
                 path: "view",
                 directoryHint: .isDirectory
             )
+            let finalThumbnailDirectory = patternDirectory.appending(
+                path: "thumbnail",
+                directoryHint: .isDirectory
+            )
             try? fileManager.removeItem(at: finalOriginalDirectory)
             try? fileManager.removeItem(at: finalViewDirectory)
+            try? fileManager.removeItem(at: finalThumbnailDirectory)
             try fileManager.moveItem(at: tempOriginalDirectory, to: finalOriginalDirectory)
             try fileManager.moveItem(at: tempViewDirectory, to: finalViewDirectory)
+            try fileManager.moveItem(at: tempThumbnailDirectory, to: finalThumbnailDirectory)
             try? fileManager.removeItem(at: tempDirectory)
 
             let finalOriginalURL = finalOriginalDirectory.appending(path: fileName)
@@ -391,6 +432,58 @@ actor FileAssetStore {
             derivedFromAssetID: derivedFromAssetID,
             createdAt: Date()
         )
+    }
+
+    private func thumbnailURL(patternID: UUID) -> URL {
+        patternsRootURL
+            .appending(path: patternID.uuidString, directoryHint: .isDirectory)
+            .appending(path: "thumbnail", directoryHint: .isDirectory)
+            .appending(path: "card.png")
+    }
+
+    private func makeThumbnail(sourceURL: URL, outputURL: URL) throws {
+        let thumbnailSize = CGSize(width: 360, height: 480)
+        let image: UIImage?
+        if sourceURL.pathExtension.localizedLowercase == "pdf" {
+            image = PDFDocument(url: sourceURL)?
+                .page(at: 0)?
+                .thumbnail(of: thumbnailSize, for: .cropBox)
+        } else {
+            image = UIImage(contentsOfFile: sourceURL.path)
+        }
+        guard let image else {
+            throw PatternImportError.storageFailure
+        }
+
+        let renderer = UIGraphicsImageRenderer(size: thumbnailSize)
+        let renderedImage = renderer.image { context in
+            UIColor(red: 1, green: 253 / 255, blue: 247 / 255, alpha: 1).setFill()
+            context.fill(CGRect(origin: .zero, size: thumbnailSize))
+
+            let scale = min(
+                thumbnailSize.width / max(image.size.width, 1),
+                thumbnailSize.height / max(image.size.height, 1)
+            )
+            let drawSize = CGSize(
+                width: image.size.width * scale,
+                height: image.size.height * scale
+            )
+            let drawRect = CGRect(
+                x: (thumbnailSize.width - drawSize.width) / 2,
+                y: (thumbnailSize.height - drawSize.height) / 2,
+                width: drawSize.width,
+                height: drawSize.height
+            )
+            image.draw(in: drawRect)
+        }
+        guard let data = renderedImage.pngData() else {
+            throw PatternImportError.storageFailure
+        }
+        try fileManager.createDirectory(
+            at: outputURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try data.write(to: outputURL, options: .atomic)
     }
 
     private func checksum(_ url: URL) throws -> String {

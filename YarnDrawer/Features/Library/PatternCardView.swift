@@ -1,18 +1,22 @@
 import SwiftUI
 
 struct PatternCardView: View {
+    @EnvironmentObject private var store: PatternStore
+
     let pattern: PatternItem
     var isFileMissing = false
     var hasChecksumMismatch = false
     let onOpen: () -> Void
     let onToggleFavorite: () -> Void
     let onShowDetails: () -> Void
+    @State private var thumbnailURL: URL?
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
             Button(action: onOpen) {
                 HStack(spacing: 0) {
                     PatternThumbnail(
+                        thumbnailURL: thumbnailURL,
                         style: pattern.thumbnailStyle,
                         symbol: pattern.symbol,
                         badge: pattern.fileBadge
@@ -101,12 +105,16 @@ struct PatternCardView: View {
             .padding(.trailing, 7)
             .padding(.top, 88)
         }
+        .task(id: pattern.id) {
+            thumbnailURL = await store.thumbnailURL(for: pattern)
+        }
         .frame(minHeight: 142)
         .ydSurfaceCard()
     }
 }
 
 private struct PatternThumbnail: View {
+    let thumbnailURL: URL?
     let style: PatternThumbnailStyle
     let symbol: String
     let badge: String
@@ -124,15 +132,22 @@ private struct PatternThumbnail: View {
 
     var body: some View {
         ZStack {
-            DiagonalStripePattern(colors: colors)
-            Circle()
-                .stroke(YDColor.cream0.opacity(0.66), lineWidth: 7)
-                .frame(width: 62, height: 62)
-                .overlay {
-                    Text(symbol)
-                        .font(YDFont.font(size: 22, weight: .black))
-                        .foregroundStyle(YDColor.ink.opacity(0.75))
+            if let thumbnailURL {
+                AsyncImage(url: thumbnailURL) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    case .failure, .empty:
+                        fallbackThumbnail
+                    @unknown default:
+                        fallbackThumbnail
+                    }
                 }
+            } else {
+                fallbackThumbnail
+            }
             VStack {
                 HStack {
                     Text(badge)
@@ -151,6 +166,19 @@ private struct PatternThumbnail: View {
         .clipped()
     }
 
+    private var fallbackThumbnail: some View {
+        ZStack {
+            DiagonalStripePattern(colors: colors)
+            Circle()
+                .stroke(YDColor.cream0.opacity(0.66), lineWidth: 7)
+                .frame(width: 62, height: 62)
+                .overlay {
+                    Text(symbol)
+                        .font(YDFont.font(size: 22, weight: .black))
+                        .foregroundStyle(YDColor.ink.opacity(0.75))
+                }
+        }
+    }
 }
 
 private struct DiagonalStripePattern: View {

@@ -167,7 +167,8 @@ struct PatternViewerView: View {
                     .presentationDetents([.medium])
                     .presentationDragIndicator(.visible)
             case .symbols:
-                CurrentPatternSymbolsView(patternTitle: pattern.title)
+                CurrentPatternSymbolsView(pattern: pattern)
+                    .environmentObject(store)
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
             case .gauge:
@@ -1098,7 +1099,7 @@ private struct MissingDocumentView: View {
             Text("작업용 PDF를 열 수 없습니다.")
                 .font(YDFont.font(size: 15, weight: .bold))
                 .foregroundStyle(YDColor.ink)
-            Text("파일 누락 감지와 재연결은 남은 구현 항목입니다.")
+            Text("상세정보에서 파일을 다시 선택해 복구할 수 있습니다.")
                 .font(YDFont.font(size: 12))
                 .foregroundStyle(YDColor.muted)
         }
@@ -1202,53 +1203,205 @@ private struct SamplePatternPaper: View {
 }
 
 private struct CurrentPatternSymbolsView: View {
-    let patternTitle: String
+    @EnvironmentObject private var store: PatternStore
+    @Environment(\.openURL) private var openURL
+
+    let pattern: PatternItem
+    @State private var query = ""
+    @State private var editorContext: SymbolEditorContext?
+    @State private var deleteCandidate: KnitSymbol?
+    @State private var pendingLinkSymbol: KnitSymbol?
+    @State private var detailSymbol: KnitSymbol?
+    @State private var toastMessage: String?
+
+    private var filteredSymbols: [KnitSymbol] {
+        store.symbols(for: pattern.id, matching: query)
+    }
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: YDSpacing.x3) {
-                    Text("\(patternTitle) 전용 기호를 먼저 표시합니다.")
-                        .font(YDFont.font(size: 13))
-                        .foregroundStyle(YDColor.yarn4)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(14)
-                        .background(YDColor.surfaceGreen)
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            ZStack(alignment: .bottom) {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: YDSpacing.x3) {
+                        Text("\(pattern.title) 전용 기호와 공통 기호를 함께 표시합니다.")
+                            .font(YDFont.font(size: 13))
+                            .foregroundStyle(YDColor.yarn4)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(14)
+                            .background(YDColor.surfaceGreen)
+                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
 
-                    symbolRow(glyph: "V", name: "중앙 두 코 늘리기", metadata: "도안 전용 · 3단 반복")
-                    symbolRow(glyph: "○", name: "바늘비우기", metadata: "공통 기호 · yo")
+                        HStack(spacing: YDSpacing.x3) {
+                            YDIconView(icon: .search, size: 20)
+                                .foregroundStyle(YDColor.muted)
+                            TextField("기호명, 약어 검색", text: $query)
+                                .font(YDFont.font(size: 14))
+                        }
+                        .padding(.horizontal, 15)
+                        .frame(minHeight: 50)
+                        .background(YDColor.cream0)
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .stroke(YDColor.line, lineWidth: 1)
+                        }
+
+                        if filteredSymbols.isEmpty {
+                            Text("표시할 기호가 없습니다.")
+                                .font(YDFont.font(size: 14, weight: .bold))
+                                .foregroundStyle(YDColor.muted)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, YDSpacing.x8)
+                                .background(YDColor.cream0.opacity(0.72))
+                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        } else {
+                            ForEach(filteredSymbols) { symbol in
+                                symbolRow(symbol)
+                            }
+                        }
+                    }
+                    .padding(YDSpacing.x4)
                 }
-                .padding(YDSpacing.x4)
+                .background(YDColor.cream0)
+
+                if let toastMessage {
+                    Text(toastMessage)
+                        .font(YDFont.font(size: 13, weight: .bold))
+                        .foregroundStyle(YDColor.cream0)
+                        .padding(.horizontal, YDSpacing.x4)
+                        .padding(.vertical, YDSpacing.x3)
+                        .background(YDColor.ink.opacity(0.96))
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .padding(.bottom, YDSpacing.x4)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
             }
-            .background(YDColor.cream0)
             .navigationTitle("현재 도안 기호")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("등록") {
+                        editorContext = SymbolEditorContext(
+                            scope: .pattern,
+                            patternID: pattern.id,
+                            symbol: nil
+                        )
+                    }
+                    .font(YDFont.font(size: 17, weight: .bold))
+                    .foregroundStyle(YDColor.yarn4)
+                }
+            }
+        }
+        .confirmationDialog(
+            "외부 링크 열기",
+            isPresented: Binding(
+                get: { pendingLinkSymbol != nil },
+                set: { if !$0 { pendingLinkSymbol = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            if let pendingLinkSymbol {
+                Button("\(pendingLinkSymbol.linkDomain) 열기") {
+                    guard let linkURL = pendingLinkSymbol.linkURL else {
+                        return
+                    }
+                    openURL(linkURL)
+                    showToast("\(pendingLinkSymbol.linkDomain)을 열었습니다.")
+                    self.pendingLinkSymbol = nil
+                }
+            }
+            Button("취소", role: .cancel) {}
+        } message: {
+            if let pendingLinkSymbol {
+                Text("\(pendingLinkSymbol.name) 설명을 시스템 브라우저에서 엽니다.")
+            }
+        }
+        .confirmationDialog(
+            "기호를 삭제할까요?",
+            isPresented: Binding(
+                get: { deleteCandidate != nil },
+                set: { if !$0 { deleteCandidate = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            if let deleteCandidate {
+                Button("삭제", role: .destructive) {
+                    deleteSymbol(deleteCandidate)
+                }
+            }
+            Button("취소", role: .cancel) {}
+        } message: {
+            if let deleteCandidate {
+                Text("\(deleteCandidate.name)을 삭제합니다.")
+            }
+        }
+        .sheet(item: $editorContext) { context in
+            SymbolEditorView(context: context) {
+                showToast(context.symbol == nil ? "기호를 등록했습니다." : "기호를 수정했습니다.")
+            }
+            .environmentObject(store)
+        }
+        .sheet(item: $detailSymbol) { symbol in
+            SymbolDetailView(
+                symbol: symbol,
+                canModify: !symbol.isSystem,
+                onOpenLink: {
+                    pendingLinkSymbol = symbol
+                },
+                onEdit: {
+                    detailSymbol = nil
+                    editorContext = SymbolEditorContext(
+                        scope: symbol.scope,
+                        patternID: symbol.patternID ?? pattern.id,
+                        symbol: symbol
+                    )
+                },
+                onDelete: {
+                    detailSymbol = nil
+                    deleteCandidate = symbol
+                }
+            )
         }
     }
 
-    private func symbolRow(glyph: String, name: String, metadata: String) -> some View {
+    private func symbolRow(_ symbol: KnitSymbol) -> some View {
         HStack(spacing: 11) {
-            Text(glyph)
-                .font(YDFont.font(size: 22, weight: .black))
-                .foregroundStyle(YDColor.yarn4)
-                .frame(width: 48, height: 48)
-                .background(YDColor.surfaceGreen)
-                .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
+            KnitSymbolMark(symbol: symbol, size: 48, cornerRadius: 13)
             VStack(alignment: .leading, spacing: 4) {
-                Text(name)
+                Text(symbol.name)
                     .font(YDFont.font(size: 14, weight: .bold))
                     .foregroundStyle(YDColor.ink)
-                Text(metadata)
+                Text(symbol.metadata)
                     .font(YDFont.font(size: 12))
                     .foregroundStyle(YDColor.muted)
             }
             Spacer()
-            Button("링크") {
+            if symbol.linkURL != nil {
+                Button("링크") {
+                    pendingLinkSymbol = symbol
+                }
+                .font(YDFont.font(size: 12, weight: .heavy))
+                .foregroundStyle(YDColor.wood3)
+                .frame(minWidth: 44, minHeight: 38)
             }
-            .font(YDFont.font(size: 12, weight: .heavy))
-            .foregroundStyle(YDColor.wood3)
-            .frame(minWidth: 44, minHeight: 38)
+            if !symbol.isSystem {
+                Menu {
+                    Button("수정") {
+                        editorContext = SymbolEditorContext(
+                            scope: symbol.scope,
+                            patternID: symbol.patternID ?? pattern.id,
+                            symbol: symbol
+                        )
+                    }
+                    Button("삭제", role: .destructive) {
+                        deleteCandidate = symbol
+                    }
+                } label: {
+                    YDIconView(icon: .more, size: 21)
+                        .foregroundStyle(YDColor.muted)
+                        .frame(width: 44, height: 44)
+                }
+            }
         }
         .padding(10)
         .background(YDColor.cream0)
@@ -1256,6 +1409,37 @@ private struct CurrentPatternSymbolsView: View {
         .overlay {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(YDColor.line, lineWidth: 1)
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            detailSymbol = symbol
+        }
+    }
+
+    private func deleteSymbol(_ symbol: KnitSymbol) {
+        Task {
+            do {
+                try await store.deleteSymbol(symbol.id)
+                deleteCandidate = nil
+                showToast("기호를 삭제했습니다.")
+            } catch {
+                deleteCandidate = nil
+                showToast(error.localizedDescription)
+            }
+        }
+    }
+
+    private func showToast(_ message: String) {
+        withAnimation(.easeOut(duration: 0.18)) {
+            toastMessage = message
+        }
+        Task {
+            try? await Task.sleep(for: .seconds(2.2))
+            await MainActor.run {
+                withAnimation(.easeOut(duration: 0.18)) {
+                    toastMessage = nil
+                }
+            }
         }
     }
 }

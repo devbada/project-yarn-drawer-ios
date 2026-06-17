@@ -13,6 +13,7 @@
 		18B6D42F7A9C1E30527496B8 /* ViewerStateRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4C6E82F1B3D507294B6D8F0 /* ViewerStateRepository.swift */; };
 		1EC507294B6D8FA2C4E6081A /* ViewerStateRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5D7F9132C4E6082A4C6E8F0 /* ViewerStateRepositoryTests.swift */; };
 		202E37CB1AD92A8CF303F5C3 /* AnnotationRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B15D914476EE03B793B707C /* AnnotationRepository.swift */; };
+		25A8C0E1F3B547698AD02C14 /* SymbolRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62C9D1E3F4A6477A8BD92E05 /* SymbolRepository.swift */; };
 		289BCA1EF8AB200E7E44473F /* PatternModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D3C3E7182B111C2902D70FC /* PatternModels.swift */; };
 		36B4BF40584BC8BECB8DE568 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A372D7B9A0B6418210AE7469 /* Assets.xcassets */; };
 		36F1A9D23C4B5E60718293A4 /* Fonts in Resources */ = {isa = PBXBuildFile; fileRef = F6E5D4C3B2A1908172635443 /* Fonts */; };
@@ -24,6 +25,7 @@
 		4C9735153091BA326E126B48 /* ImagePDFConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0868DEE256668B7B4672FFC4 /* ImagePDFConverter.swift */; };
 		5BBC65EB86959E26DFE35A92 /* PatternModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AAFB80AF852898300F9808E /* PatternModelTests.swift */; };
 		5D5EF158EFF16073C5F11601 /* FileAssetStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFD340E40483DB0933E16E50 /* FileAssetStore.swift */; };
+		5F82EA7C91D34B50A6F4782D /* SymbolRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D714E6C193A34F1F8B24A915 /* SymbolRepositoryTests.swift */; };
 		66AB0CE43B0DA2EDAA64AAE0 /* PatternRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA7B6D66DF91CDB00763AE5C /* PatternRepository.swift */; };
 		67ECAA854F2EB365771B0DF8 /* YarnDrawerDesign.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16FC92F607A36303067218B3 /* YarnDrawerDesign.swift */; };
 		96F9ACA8739D60970C03D55E /* YarnDrawerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 690044E3A5253A7110C0BFD9 /* YarnDrawerApp.swift */; };
@@ -58,6 +60,7 @@
 		3AAFB80AF852898300F9808E /* PatternModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternModelTests.swift; sourceTree = "<group>"; };
 		3D3C3E7182B111C2902D70FC /* PatternModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternModels.swift; sourceTree = "<group>"; };
 		4B15D914476EE03B793B707C /* AnnotationRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnotationRepository.swift; sourceTree = "<group>"; };
+		62C9D1E3F4A6477A8BD92E05 /* SymbolRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SymbolRepository.swift; sourceTree = "<group>"; };
 		690044E3A5253A7110C0BFD9 /* YarnDrawerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YarnDrawerApp.swift; sourceTree = "<group>"; };
 		6D23D72E4762952860897C42 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		818479110DAE2F306ADFBF8C /* PDFKitView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFKitView.swift; sourceTree = "<group>"; };
@@ -73,6 +76,7 @@
 		BFD340E40483DB0933E16E50 /* FileAssetStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileAssetStore.swift; sourceTree = "<group>"; };
 		C6E8A0B2D4F617395B7D9F1A /* PatternDetailsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternDetailsView.swift; sourceTree = "<group>"; };
 		D9D0DE59508934E3830EEF66 /* PatternStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternStore.swift; sourceTree = "<group>"; };
+		D714E6C193A34F1F8B24A915 /* SymbolRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SymbolRepositoryTests.swift; sourceTree = "<group>"; };
 		EA7B6D66DF91CDB00763AE5C /* PatternRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternRepository.swift; sourceTree = "<group>"; };
 		EA8B170DA68A4086CCC35C1A /* GaugeCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GaugeCalculator.swift; sourceTree = "<group>"; };
 		F6E5D4C3B2A1908172635443 /* Fonts */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Fonts; sourceTree = "<group>"; };
@@ -86,6 +90,7 @@
 				A20F0871BD9E5CC1424150EB /* GaugeCalculatorTests.swift */,
 				3AAFB80AF852898300F9808E /* PatternModelTests.swift */,
 				93B5D71F2A4C6E8091B3D5F7 /* PatternRepositoryTests.swift */,
+				D714E6C193A34F1F8B24A915 /* SymbolRepositoryTests.swift */,
 				B5D7F9132C4E6082A4C6E8F0 /* ViewerStateRepositoryTests.swift */,
 			);
 			path = YarnDrawerTests;
@@ -204,6 +209,7 @@
 				BFD340E40483DB0933E16E50 /* FileAssetStore.swift */,
 				0868DEE256668B7B4672FFC4 /* ImagePDFConverter.swift */,
 				EA7B6D66DF91CDB00763AE5C /* PatternRepository.swift */,
+				62C9D1E3F4A6477A8BD92E05 /* SymbolRepository.swift */,
 				A4C6E82F1B3D507294B6D8F0 /* ViewerStateRepository.swift */,
 			);
 			path = Services;
@@ -323,6 +329,7 @@
 				4419A79FC639EE078D68759C /* GaugeCalculatorTests.swift in Sources */,
 				5BBC65EB86959E26DFE35A92 /* PatternModelTests.swift in Sources */,
 				12A4D61B8C2E4F6091A3B5C7 /* PatternRepositoryTests.swift in Sources */,
+				5F82EA7C91D34B50A6F4782D /* SymbolRepositoryTests.swift in Sources */,
 				1EC507294B6D8FA2C4E6081A /* ViewerStateRepositoryTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -348,6 +355,7 @@
 				3B228A59E4B268BE97E33FB7 /* RootView.swift in Sources */,
 				0B416D50FB247D03E033DD8D /* SettingsView.swift in Sources */,
 				06C7D40EFF55970480F7047E /* SymbolsView.swift in Sources */,
+				25A8C0E1F3B547698AD02C14 /* SymbolRepository.swift in Sources */,
 				18B6D42F7A9C1E30527496B8 /* ViewerStateRepository.swift in Sources */,
 				96F9ACA8739D60970C03D55E /* YarnDrawerApp.swift in Sources */,
 				67ECAA854F2EB365771B0DF8 /* YarnDrawerDesign.swift in Sources */,

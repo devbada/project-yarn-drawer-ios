@@ -10,6 +10,7 @@ struct PatternImportView: View {
     @State private var designerName = ""
     @State private var craftType: CraftType = .knitting
     @State private var tagsText = ""
+    @State private var invalidFields = Set<ImportValidationField>()
 
     var body: some View {
         NavigationStack {
@@ -37,11 +38,19 @@ struct PatternImportView: View {
                     }
 
                     VStack(spacing: YDSpacing.x3) {
-                        field(title: "도안명") {
+                        field(
+                            title: "도안명",
+                            isInvalid: invalidFields.contains(.title) && !isTitleValid,
+                            message: "도안명을 입력해 주세요."
+                        ) {
                             TextField("필수", text: $title)
                                 .textInputAutocapitalization(.never)
                         }
-                        field(title: "작가명") {
+                        field(
+                            title: "작가명",
+                            isInvalid: invalidFields.contains(.designerName) && !isDesignerNameValid,
+                            message: "작가명은 100자 이하로 입력해 주세요."
+                        ) {
                             TextField("선택", text: $designerName)
                                 .textInputAutocapitalization(.never)
                         }
@@ -87,8 +96,7 @@ struct PatternImportView: View {
                             }
                         }
                         .buttonStyle(YDPrimaryButtonStyle())
-                        .disabled(selectedURL == nil || store.isImporting)
-                        .opacity(selectedURL == nil ? 0.48 : 1)
+                        .disabled(store.isImporting)
                     }
                 }
                 .padding(YDSpacing.x4)
@@ -138,28 +146,49 @@ struct PatternImportView: View {
             .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(YDColor.wood2, style: StrokeStyle(lineWidth: 2, dash: [7]))
+                    .stroke(
+                        isFileInvalid ? YDColor.danger : YDColor.wood2,
+                        style: StrokeStyle(lineWidth: isFileInvalid ? 3 : 2, dash: [7])
+                    )
             }
         }
         .buttonStyle(.plain)
+        .overlay(alignment: .bottomLeading) {
+            if isFileInvalid {
+                Text("도안 파일을 선택해 주세요.")
+                    .font(YDFont.font(size: 12, weight: .bold))
+                    .foregroundStyle(YDColor.danger)
+                    .padding(.horizontal, 14)
+                    .padding(.bottom, 10)
+            }
+        }
     }
 
     private func field<Content: View>(
         title: String,
+        isInvalid: Bool = false,
+        message: String? = nil,
         @ViewBuilder content: () -> Content
     ) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(title)
-                .font(YDFont.font(size: 12, weight: .heavy))
-                .foregroundStyle(YDColor.muted)
+            HStack(spacing: YDSpacing.x2) {
+                Text(title)
+                    .font(YDFont.font(size: 12, weight: .heavy))
+                    .foregroundStyle(isInvalid ? YDColor.danger : YDColor.muted)
+                if isInvalid, let message {
+                    Text(message)
+                        .font(YDFont.font(size: 12, weight: .bold))
+                        .foregroundStyle(YDColor.danger)
+                }
+            }
             content()
                 .padding(.horizontal, YDSpacing.x3)
                 .frame(minHeight: 46)
-                .background(YDColor.cream0)
+                .background(isInvalid ? YDColor.danger.opacity(0.06) : YDColor.cream0)
                 .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
                 .overlay {
                     RoundedRectangle(cornerRadius: 13, style: .continuous)
-                        .stroke(YDColor.line, lineWidth: 1)
+                        .stroke(isInvalid ? YDColor.danger : YDColor.line, lineWidth: isInvalid ? 2 : 1)
                 }
         }
     }
@@ -174,6 +203,7 @@ struct PatternImportView: View {
 
     private func selectFile(_ url: URL) {
         selectedURL = url
+        invalidFields.remove(.file)
         if title.isEmpty {
             title = url.deletingPathExtension().lastPathComponent
         }
@@ -181,6 +211,11 @@ struct PatternImportView: View {
     }
 
     private func register() {
+        invalidFields = validationFields()
+        guard invalidFields.isEmpty else {
+            store.importErrorMessage = "필수 정보를 입력해 주세요."
+            return
+        }
         guard let selectedURL else { return }
         let draft = PatternImportDraft(
             sourceURL: selectedURL,
@@ -195,6 +230,40 @@ struct PatternImportView: View {
             }
         }
     }
+
+    private func validationFields() -> Set<ImportValidationField> {
+        var fields = Set<ImportValidationField>()
+        if selectedURL == nil {
+            fields.insert(.file)
+        }
+        let normalizedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        if normalizedTitle.isEmpty || normalizedTitle.count > 100 {
+            fields.insert(.title)
+        }
+        if designerName.count > 100 {
+            fields.insert(.designerName)
+        }
+        return fields
+    }
+
+    private var isFileInvalid: Bool {
+        invalidFields.contains(.file) && selectedURL == nil
+    }
+
+    private var isTitleValid: Bool {
+        let normalizedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !normalizedTitle.isEmpty && normalizedTitle.count <= 100
+    }
+
+    private var isDesignerNameValid: Bool {
+        designerName.count <= 100
+    }
+}
+
+private enum ImportValidationField {
+    case file
+    case title
+    case designerName
 }
 
 private struct PatternDocumentPicker: UIViewControllerRepresentable {

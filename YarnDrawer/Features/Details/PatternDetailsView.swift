@@ -26,6 +26,7 @@ struct PatternDetailsView: View {
     @State private var showsReconnectPicker = false
     @State private var isSaving = false
     @State private var didLoad = false
+    @State private var invalidFields = Set<DetailsValidationField>()
 
     var body: some View {
         NavigationStack {
@@ -37,10 +38,18 @@ struct PatternDetailsView: View {
                         }
 
                         section("기본 정보") {
-                            field("도안명") {
+                            field(
+                                "도안명",
+                                isInvalid: invalidFields.contains(.title) && !isTitleValid,
+                                message: "도안명을 입력해 주세요."
+                            ) {
                                 TextField("필수", text: $title)
                             }
-                            field("작가명") {
+                            field(
+                                "작가명",
+                                isInvalid: invalidFields.contains(.designerName) && !isDesignerNameValid,
+                                message: "작가명은 100자 이하로 입력해 주세요."
+                            ) {
                                 TextField("선택", text: $designerName)
                             }
                             field("종류") {
@@ -257,21 +266,30 @@ struct PatternDetailsView: View {
 
     private func field<Content: View>(
         _ title: String,
+        isInvalid: Bool = false,
+        message: String? = nil,
         @ViewBuilder content: () -> Content
     ) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(title)
-                .font(YDFont.font(size: 12, weight: .heavy))
-                .foregroundStyle(YDColor.muted)
+            HStack(spacing: YDSpacing.x2) {
+                Text(title)
+                    .font(YDFont.font(size: 12, weight: .heavy))
+                    .foregroundStyle(isInvalid ? YDColor.danger : YDColor.muted)
+                if isInvalid, let message {
+                    Text(message)
+                        .font(YDFont.font(size: 12, weight: .bold))
+                        .foregroundStyle(YDColor.danger)
+                }
+            }
             content()
                 .textInputAutocapitalization(.never)
                 .padding(.horizontal, YDSpacing.x3)
                 .frame(minHeight: 46)
-                .background(YDColor.cream0)
+                .background(isInvalid ? YDColor.danger.opacity(0.06) : YDColor.cream0)
                 .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
                 .overlay {
                     RoundedRectangle(cornerRadius: 13, style: .continuous)
-                        .stroke(YDColor.line, lineWidth: 1)
+                        .stroke(isInvalid ? YDColor.danger : YDColor.line, lineWidth: isInvalid ? 2 : 1)
                 }
         }
     }
@@ -359,6 +377,12 @@ struct PatternDetailsView: View {
             return
         }
 
+        invalidFields = validationFields()
+        guard invalidFields.isEmpty else {
+            errorMessage = "필수 정보를 입력해 주세요."
+            return
+        }
+
         do {
             updatedPattern.title = title
             updatedPattern.designerName = designerName.nilIfBlank
@@ -396,6 +420,26 @@ struct PatternDetailsView: View {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    private func validationFields() -> Set<DetailsValidationField> {
+        var fields = Set<DetailsValidationField>()
+        if !isTitleValid {
+            fields.insert(.title)
+        }
+        if !isDesignerNameValid {
+            fields.insert(.designerName)
+        }
+        return fields
+    }
+
+    private var isTitleValid: Bool {
+        let normalizedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !normalizedTitle.isEmpty && normalizedTitle.count <= 100
+    }
+
+    private var isDesignerNameValid: Bool {
+        designerName.count <= 100
     }
 
     private func deletePattern() {
@@ -480,6 +524,11 @@ private extension String {
         let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
     }
+}
+
+private enum DetailsValidationField {
+    case title
+    case designerName
 }
 
 private struct PatternReconnectDocumentPicker: UIViewControllerRepresentable {

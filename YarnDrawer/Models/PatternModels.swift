@@ -143,6 +143,11 @@ struct NormalizedPoint: Codable, Hashable {
     let x: Double
     let y: Double
 
+    init(x: Double, y: Double) {
+        self.x = min(max(x, 0), 1)
+        self.y = min(max(y, 0), 1)
+    }
+
     init?(point: CGPoint, in pageBounds: CGRect) {
         guard
             pageBounds.width > 0,
@@ -201,6 +206,134 @@ struct PatternViewerState: Codable, Equatable {
     var lastPageIndex: Int
     var scaleFactor: Double?
     var updatedAt: Date
+}
+
+enum KnitSymbolScope: String, Codable, CaseIterable, Identifiable {
+    case common
+    case pattern
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .common: "공통 기호"
+        case .pattern: "도안 전용"
+        }
+    }
+}
+
+struct KnitSymbol: Codable, Identifiable, Hashable {
+    let id: UUID
+    var scope: KnitSymbolScope
+    var patternID: UUID?
+    var glyph: String
+    var drawingStrokes: [[NormalizedPoint]]?
+    var name: String
+    var abbreviation: String
+    var description: String
+    var linkURLString: String?
+    var isFavorite: Bool
+    var isSystem: Bool
+    var createdAt: Date
+    var updatedAt: Date
+
+    var metadata: String {
+        let parts = [
+            abbreviation,
+            description
+        ].filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        return parts.isEmpty ? scope.title : parts.joined(separator: " · ")
+    }
+
+    var linkURL: URL? {
+        guard let linkURLString else {
+            return nil
+        }
+        return URL(string: linkURLString)
+    }
+
+    var linkDomain: String {
+        linkURL?.host() ?? linkURL?.host ?? "외부 사이트"
+    }
+
+    func matches(_ query: String) -> Bool {
+        let normalizedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedQuery.isEmpty else {
+            return true
+        }
+        return [
+            glyph,
+            name,
+            abbreviation,
+            description,
+            linkURLString ?? ""
+        ]
+            .joined(separator: " ")
+            .localizedCaseInsensitiveContains(normalizedQuery)
+    }
+}
+
+struct KnitSymbolDraft {
+    var id: KnitSymbol.ID?
+    var scope: KnitSymbolScope
+    var patternID: PatternItem.ID?
+    var glyph: String
+    var drawingStrokes: [[NormalizedPoint]]
+    var name: String
+    var abbreviation: String
+    var description: String
+    var linkURLString: String
+    var isFavorite: Bool
+}
+
+extension KnitSymbol {
+    static let defaultCommonSymbols: [KnitSymbol] = [
+        KnitSymbol(
+            id: UUID(uuidString: "B3453F83-916A-4475-8C96-9D2E9FB72B47")!,
+            scope: .common,
+            patternID: nil,
+            glyph: "○",
+            drawingStrokes: nil,
+            name: "바늘비우기",
+            abbreviation: "yo",
+            description: "yarn over",
+            linkURLString: "https://en.wikipedia.org/wiki/Yarn_over",
+            isFavorite: true,
+            isSystem: true,
+            createdAt: Date(timeIntervalSince1970: 0),
+            updatedAt: Date(timeIntervalSince1970: 0)
+        ),
+        KnitSymbol(
+            id: UUID(uuidString: "A089E05D-4C19-4F33-B6F3-432A0B8990EF")!,
+            scope: .common,
+            patternID: nil,
+            glyph: "＼",
+            drawingStrokes: nil,
+            name: "왼 코 늘리기",
+            abbreviation: "m1l",
+            description: "왼쪽 기울임",
+            linkURLString: "https://en.wikipedia.org/wiki/List_of_knitting_stitches",
+            isFavorite: false,
+            isSystem: true,
+            createdAt: Date(timeIntervalSince1970: 0),
+            updatedAt: Date(timeIntervalSince1970: 0)
+        ),
+        KnitSymbol(
+            id: UUID(uuidString: "B57D8215-6726-4B46-A3C4-5E079891295E")!,
+            scope: .common,
+            patternID: nil,
+            glyph: "DS",
+            drawingStrokes: nil,
+            name: "더블 스티치",
+            abbreviation: "DS",
+            description: "German short row",
+            linkURLString: "https://en.wikipedia.org/wiki/Short_row_(knitting)",
+            isFavorite: false,
+            isSystem: true,
+            createdAt: Date(timeIntervalSince1970: 0),
+            updatedAt: Date(timeIntervalSince1970: 0)
+        )
+    ]
 }
 
 struct PatternGaugeInfo: Codable, Hashable {
