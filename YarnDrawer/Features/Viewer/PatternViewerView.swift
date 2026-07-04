@@ -138,6 +138,12 @@ struct PatternViewerView: View {
                 }
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
+
+            #if DEBUG
+            if isUITestDebugStateEnabled {
+                debugHighlightStateView
+            }
+            #endif
         }
         .onAppear {
             restoreViewerToolPreferences()
@@ -840,7 +846,7 @@ struct PatternViewerView: View {
         isDirty = true
         annotationSaveFailed = false
         pendingAnnotationSaveCount += 1
-        showToast("\(annotation.type.saveTitle)을 자동 저장합니다.")
+        showToast("\(annotation.type.saveTitleWithObjectParticle) 자동 저장합니다.")
 
         Task {
             do {
@@ -855,13 +861,13 @@ struct PatternViewerView: View {
                 pendingAnnotationSaveCount = max(0, pendingAnnotationSaveCount - 1)
                 if pendingAnnotationSaveCount == 0 {
                     isDirty = false
-                    showToast("\(annotation.type.saveTitle)을 저장했습니다.")
+                    showToast("\(annotation.type.saveTitleWithObjectParticle) 저장했습니다.")
                 }
             } catch {
                 pendingAnnotationSaveCount = max(0, pendingAnnotationSaveCount - 1)
                 annotationSaveFailed = true
                 isDirty = true
-                showToast("\(annotation.type.saveTitle)을 저장하지 못했습니다.")
+                showToast("\(annotation.type.saveTitleWithObjectParticle) 저장하지 못했습니다.")
             }
         }
     }
@@ -875,7 +881,7 @@ struct PatternViewerView: View {
         isDirty = true
         annotationSaveFailed = false
         pendingAnnotationSaveCount += 1
-        showToast("\(annotation.type.saveTitle)을 삭제합니다.")
+        showToast("\(annotation.type.saveTitleWithObjectParticle) 삭제합니다.")
 
         Task {
             do {
@@ -886,13 +892,13 @@ struct PatternViewerView: View {
                 pendingAnnotationSaveCount = max(0, pendingAnnotationSaveCount - 1)
                 if pendingAnnotationSaveCount == 0 {
                     isDirty = false
-                    showToast(successMessage ?? "\(annotation.type.saveTitle)을 삭제했습니다.")
+                    showToast(successMessage ?? "\(annotation.type.saveTitleWithObjectParticle) 삭제했습니다.")
                 }
             } catch {
                 pendingAnnotationSaveCount = max(0, pendingAnnotationSaveCount - 1)
                 annotationSaveFailed = true
                 isDirty = true
-                showToast("\(annotation.type.saveTitle)을 삭제하지 못했습니다.")
+                showToast("\(annotation.type.saveTitleWithObjectParticle) 삭제하지 못했습니다.")
             }
         }
     }
@@ -906,7 +912,7 @@ struct PatternViewerView: View {
         isDirty = true
         annotationSaveFailed = false
         pendingAnnotationSaveCount += 1
-        showToast("\(annotation.type.saveTitle)을 이동합니다.")
+        showToast("\(annotation.type.saveTitleWithObjectParticle) 이동합니다.")
 
         Task {
             do {
@@ -917,13 +923,13 @@ struct PatternViewerView: View {
                 pendingAnnotationSaveCount = max(0, pendingAnnotationSaveCount - 1)
                 if pendingAnnotationSaveCount == 0 {
                     isDirty = false
-                    showToast("\(annotation.type.saveTitle)을 이동했습니다.")
+                    showToast("\(annotation.type.saveTitleWithObjectParticle) 이동했습니다.")
                 }
             } catch {
                 pendingAnnotationSaveCount = max(0, pendingAnnotationSaveCount - 1)
                 annotationSaveFailed = true
                 isDirty = true
-                showToast("\(annotation.type.saveTitle)을 이동하지 못했습니다.")
+                showToast("\(annotation.type.saveTitleWithObjectParticle) 이동하지 못했습니다.")
             }
         }
     }
@@ -1064,6 +1070,32 @@ struct PatternViewerView: View {
             }
         }
     }
+
+    #if DEBUG
+    /// UI 테스트가 실제 화면 렌더링과 무관하게 저장된 highlight 상태(개수, 마지막 색상)를
+    /// 결정론적으로 검증할 수 있도록 노출하는 디버그 전용 훅. `YARN_DRAWER_UI_TEST_MODE`
+    /// 환경변수가 설정된 경우에만(테스트 실행 시에만) 나타나며, 일반 빌드/릴리즈 UX에는
+    /// 절대 노출되지 않는다.
+    private var isUITestDebugStateEnabled: Bool {
+        ProcessInfo.processInfo.environment["YARN_DRAWER_UI_TEST_MODE"] == "1"
+    }
+
+    private var debugHighlightStateText: String {
+        let highlights = annotations.filter { $0.type == .highlight }
+        let lastHex = highlights
+            .max { $0.createdAt < $1.createdAt }?
+            .resolvedHighlightHex ?? "none"
+        return "highlightCount=\(highlights.count);lastHighlightHex=\(lastHex)"
+    }
+
+    private var debugHighlightStateView: some View {
+        Text(debugHighlightStateText)
+            .font(.system(size: 1))
+            .opacity(0.01)
+            .accessibilityIdentifier("debugHighlightState")
+            .allowsHitTesting(false)
+    }
+    #endif
 }
 
 private extension PatternAnnotationType {
@@ -1074,6 +1106,18 @@ private extension PatternAnnotationType {
         case .note: "메모"
         case .currentRow: "현재 줄"
         }
+    }
+
+    /// 받침 유무에 따라 "을/를"을 올바르게 붙인 목적어 형태.
+    var saveTitleWithObjectParticle: String {
+        guard
+            let last = saveTitle.unicodeScalars.last,
+            (0xAC00...0xD7A3).contains(last.value)
+        else {
+            return "\(saveTitle)을"
+        }
+        let hasBatchim = (last.value - 0xAC00) % 28 != 0
+        return "\(saveTitle)\(hasBatchim ? "을" : "를")"
     }
 }
 

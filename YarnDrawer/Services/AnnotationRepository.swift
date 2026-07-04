@@ -4,15 +4,22 @@ actor AnnotationRepository {
     private let fileManager: FileManager
     private let rootURL: URL
 
-    init(fileManager: FileManager = .default) {
+    init(
+        fileManager: FileManager = .default,
+        rootURL: URL? = nil
+    ) {
         self.fileManager = fileManager
-        let applicationSupport = fileManager.urls(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask
-        )[0]
-        rootURL = applicationSupport
-            .appending(path: "YarnDrawer", directoryHint: .isDirectory)
-            .appending(path: "annotations", directoryHint: .isDirectory)
+        if let rootURL {
+            self.rootURL = rootURL
+        } else {
+            let applicationSupport = fileManager.urls(
+                for: .applicationSupportDirectory,
+                in: .userDomainMask
+            )[0]
+            self.rootURL = applicationSupport
+                .appending(path: "YarnDrawer", directoryHint: .isDirectory)
+                .appending(path: "annotations", directoryHint: .isDirectory)
+        }
     }
 
     func load(patternID: UUID) throws -> [PatternAnnotation] {

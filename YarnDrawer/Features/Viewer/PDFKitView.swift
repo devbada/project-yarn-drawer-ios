@@ -33,6 +33,7 @@ struct PDFKitView: UIViewRepresentable {
         view.delegate = context.coordinator
         context.coordinator.configureTextSelection(
             allowsTextSelection,
+            isHighlighting: annotationTool == .highlight,
             in: view
         )
 
@@ -47,6 +48,7 @@ struct PDFKitView: UIViewRepresentable {
             NSNumber(value: UITouch.TouchType.pencil.rawValue)
         ]
         highlightGesture.cancelsTouchesInView = true
+        highlightGesture.delegate = context.coordinator
         view.addGestureRecognizer(highlightGesture)
 
         let placementGesture = UITapGestureRecognizer(
@@ -122,6 +124,7 @@ struct PDFKitView: UIViewRepresentable {
         context.coordinator.configureScrolling(for: annotationTool == .highlight)
         context.coordinator.configureTextSelection(
             allowsTextSelection,
+            isHighlighting: annotationTool == .highlight,
             in: view
         )
     }
@@ -305,9 +308,10 @@ struct PDFKitView: UIViewRepresentable {
 
         func configureTextSelection(
             _ allowsTextSelection: Bool,
+            isHighlighting: Bool,
             in pdfView: PDFView
         ) {
-            pdfView.isInMarkupMode = !allowsTextSelection
+            pdfView.isInMarkupMode = !allowsTextSelection && !isHighlighting
             if !allowsTextSelection, pdfView.currentSelection != nil {
                 pdfView.clearSelection()
             }
@@ -444,8 +448,11 @@ struct PDFKitView: UIViewRepresentable {
             _ gestureRecognizer: UIGestureRecognizer,
             shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
         ) -> Bool {
-            (gestureRecognizer === selectionGesture && otherGestureRecognizer === moveGesture) ||
-            (gestureRecognizer === moveGesture && otherGestureRecognizer === selectionGesture)
+            if gestureRecognizer === highlightGesture || otherGestureRecognizer === highlightGesture {
+                return parent.annotationTool == .highlight
+            }
+            return (gestureRecognizer === selectionGesture && otherGestureRecognizer === moveGesture) ||
+                (gestureRecognizer === moveGesture && otherGestureRecognizer === selectionGesture)
         }
 
         @objc func handleSelectionGesture(_ gesture: UILongPressGestureRecognizer) {

@@ -12,6 +12,16 @@ SwiftUI 기반 iPhone/iPad MVP 프로젝트다.
 
 앱 데이터 컨테이너 보존을 위해 Bundle Identifier는 `com.minam.YarnDrawer`로 유지한다. Bundle Identifier 변경 시 기존 설치 데이터에 접근할 수 없다.
 
+## 검증
+
+Phase 작업 후에는 같은 scheme에서 빌드, 정적 분석, 단위 테스트, UI 테스트를 실행한다.
+
+```sh
+xcodebuild -project YarnDrawer.xcodeproj -scheme YarnDrawer -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build
+xcodebuild -project YarnDrawer.xcodeproj -scheme YarnDrawer -destination 'platform=iOS Simulator,name=iPhone 17 Pro' analyze
+xcodebuild test -project YarnDrawer.xcodeproj -scheme YarnDrawer -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
+```
+
 ## 형광펜 사용
 
 1. 등록한 PDF 또는 이미지 변환 도안을 연다.

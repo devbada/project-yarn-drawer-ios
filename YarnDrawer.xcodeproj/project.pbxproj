@@ -9,7 +9,9 @@
 /* Begin PBXBuildFile section */
 		06C7D40EFF55970480F7047E /* SymbolsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0AF1321D69D61763DF5FEF1 /* SymbolsView.swift */; };
 		0B416D50FB247D03E033DD8D /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1283EC9FCA02D964AA03584A /* SettingsView.swift */; };
+		0D5913E1C1D1449AA5A5E83A /* AnnotationRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B2E4CC4C41642ECBB71F37A /* AnnotationRepositoryTests.swift */; };
 		12A4D61B8C2E4F6091A3B5C7 /* PatternRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93B5D71F2A4C6E8091B3D5F7 /* PatternRepositoryTests.swift */; };
+		1A2B3C4D5E6F708192A3B4C5 /* YarnDrawerUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F4E7A9B2C3D4E5F60718293 /* YarnDrawerUITests.swift */; };
 		18B6D42F7A9C1E30527496B8 /* ViewerStateRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4C6E82F1B3D507294B6D8F0 /* ViewerStateRepository.swift */; };
 		1EC507294B6D8FA2C4E6081A /* ViewerStateRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5D7F9132C4E6082A4C6E8F0 /* ViewerStateRepositoryTests.swift */; };
 		202E37CB1AD92A8CF303F5C3 /* AnnotationRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B15D914476EE03B793B707C /* AnnotationRepository.swift */; };
@@ -46,16 +48,25 @@
 			remoteGlobalIDString = 5C3076EFDF7C1D3C47E26B48;
 			remoteInfo = YarnDrawer;
 		};
+		708192A3B4C5D6E7F8091A2B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 78C15C26C4E3071B950C6DB3 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 5C3076EFDF7C1D3C47E26B48;
+			remoteInfo = YarnDrawer;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		00E377188E66ACD5A4ED1A71 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
+		0F4E7A9B2C3D4E5F60718293 /* YarnDrawerUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YarnDrawerUITests.swift; sourceTree = "<group>"; };
 		0198A55A8F9BF4635965E63F /* PatternCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternCardView.swift; sourceTree = "<group>"; };
 		023BA223CB3284522B8A9BF5 /* PatternImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternImportView.swift; sourceTree = "<group>"; };
 		0868DEE256668B7B4672FFC4 /* ImagePDFConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImagePDFConverter.swift; sourceTree = "<group>"; };
 		1283EC9FCA02D964AA03584A /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		16FC92F607A36303067218B3 /* YarnDrawerDesign.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YarnDrawerDesign.swift; sourceTree = "<group>"; };
 		1BF0DA88915DF504F2A8D0D8 /* YarnDrawer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = YarnDrawer.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2B3C4D5E6F708192A3B4C5D6 /* YarnDrawerUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = YarnDrawerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		395B63CDC01C715C086CEFFA /* YarnDrawerTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = YarnDrawerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3AAFB80AF852898300F9808E /* PatternModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternModelTests.swift; sourceTree = "<group>"; };
 		3D3C3E7182B111C2902D70FC /* PatternModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternModels.swift; sourceTree = "<group>"; };
@@ -63,6 +74,7 @@
 		62C9D1E3F4A6477A8BD92E05 /* SymbolRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SymbolRepository.swift; sourceTree = "<group>"; };
 		690044E3A5253A7110C0BFD9 /* YarnDrawerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YarnDrawerApp.swift; sourceTree = "<group>"; };
 		6D23D72E4762952860897C42 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		7B2E4CC4C41642ECBB71F37A /* AnnotationRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnotationRepositoryTests.swift; sourceTree = "<group>"; };
 		818479110DAE2F306ADFBF8C /* PDFKitView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFKitView.swift; sourceTree = "<group>"; };
 		8BA3F901555B7F20E78192CA /* AnnotationModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnotationModelTests.swift; sourceTree = "<group>"; };
 		93B5D71F2A4C6E8091B3D5F7 /* PatternRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternRepositoryTests.swift; sourceTree = "<group>"; };
@@ -87,6 +99,7 @@
 			isa = PBXGroup;
 			children = (
 				8BA3F901555B7F20E78192CA /* AnnotationModelTests.swift */,
+				7B2E4CC4C41642ECBB71F37A /* AnnotationRepositoryTests.swift */,
 				A20F0871BD9E5CC1424150EB /* GaugeCalculatorTests.swift */,
 				3AAFB80AF852898300F9808E /* PatternModelTests.swift */,
 				93B5D71F2A4C6E8091B3D5F7 /* PatternRepositoryTests.swift */,
@@ -114,6 +127,14 @@
 				690044E3A5253A7110C0BFD9 /* YarnDrawerApp.swift */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		3C4D5E6F708192A3B4C5D6E7 /* YarnDrawerUITests */ = {
+			isa = PBXGroup;
+			children = (
+				0F4E7A9B2C3D4E5F60718293 /* YarnDrawerUITests.swift */,
+			);
+			path = YarnDrawerUITests;
 			sourceTree = "<group>";
 		};
 		24DFD82C0BD4444C18A98F89 /* Models */ = {
@@ -158,6 +179,7 @@
 			children = (
 				1BF0DA88915DF504F2A8D0D8 /* YarnDrawer.app */,
 				395B63CDC01C715C086CEFFA /* YarnDrawerTests.xctest */,
+				2B3C4D5E6F708192A3B4C5D6 /* YarnDrawerUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -180,6 +202,7 @@
 			children = (
 				4A050CCFBD4CF2A765BCACE9 /* YarnDrawer */,
 				0A3D39C10150A5545EE70F0B /* YarnDrawerTests */,
+				3C4D5E6F708192A3B4C5D6E7 /* YarnDrawerUITests */,
 				3A16AF84ABBA60F89636857F /* Products */,
 			);
 			sourceTree = "<group>";
@@ -261,6 +284,24 @@
 			productReference = 395B63CDC01C715C086CEFFA /* YarnDrawerTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		4D5E6F708192A3B4C5D6E7F8 /* YarnDrawerUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8192A3B4C5D6E7F8091A2B3C /* Build configuration list for PBXNativeTarget "YarnDrawerUITests" */;
+			buildPhases = (
+				5E6F708192A3B4C5D6E7F809 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				6F708192A3B4C5D6E7F8091A /* PBXTargetDependency */,
+			);
+			name = YarnDrawerUITests;
+			packageProductDependencies = (
+			);
+			productName = YarnDrawerUITests;
+			productReference = 2B3C4D5E6F708192A3B4C5D6 /* YarnDrawerUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 		5C3076EFDF7C1D3C47E26B48 /* YarnDrawer */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 36A6430C000B5152F2814A75 /* Build configuration list for PBXNativeTarget "YarnDrawer" */;
@@ -304,6 +345,7 @@
 			targets = (
 				5C3076EFDF7C1D3C47E26B48 /* YarnDrawer */,
 				439330808378C8487984EE1C /* YarnDrawerTests */,
+				4D5E6F708192A3B4C5D6E7F8 /* YarnDrawerUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -326,11 +368,20 @@
 			buildActionMask = 2147483647;
 			files = (
 				F1A711CC25716B279A09F519 /* AnnotationModelTests.swift in Sources */,
+				0D5913E1C1D1449AA5A5E83A /* AnnotationRepositoryTests.swift in Sources */,
 				4419A79FC639EE078D68759C /* GaugeCalculatorTests.swift in Sources */,
 				5BBC65EB86959E26DFE35A92 /* PatternModelTests.swift in Sources */,
 				12A4D61B8C2E4F6091A3B5C7 /* PatternRepositoryTests.swift in Sources */,
 				5F82EA7C91D34B50A6F4782D /* SymbolRepositoryTests.swift in Sources */,
 				1EC507294B6D8FA2C4E6081A /* ViewerStateRepositoryTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5E6F708192A3B4C5D6E7F809 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1A2B3C4D5E6F708192A3B4C5 /* YarnDrawerUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -370,6 +421,11 @@
 			target = 5C3076EFDF7C1D3C47E26B48 /* YarnDrawer */;
 			targetProxy = B053E08B8FC438EB6C30D032 /* PBXContainerItemProxy */;
 		};
+		6F708192A3B4C5D6E7F8091A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 5C3076EFDF7C1D3C47E26B48 /* YarnDrawer */;
+			targetProxy = 708192A3B4C5D6E7F8091A2B /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -387,6 +443,23 @@
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/YarnDrawer.app/YarnDrawer";
+			};
+			name = Debug;
+		};
+		92A3B4C5D6E7F8091A2B3C4D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.YarnDrawerUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = YarnDrawer;
 			};
 			name = Debug;
 		};
@@ -560,6 +633,23 @@
 			};
 			name = Release;
 		};
+		A3B4C5D6E7F8091A2B3C4D5E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.YarnDrawerUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = YarnDrawer;
+			};
+			name = Release;
+		};
 		BFF923BE47E5229D68DCB35E /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -616,6 +706,15 @@
 			buildConfigurations = (
 				7E813D4C8B726172C8FC4B49 /* Debug */,
 				777EF03527F26C3291CDED8B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		8192A3B4C5D6E7F8091A2B3C /* Build configuration list for PBXNativeTarget "YarnDrawerUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				92A3B4C5D6E7F8091A2B3C4D /* Debug */,
+				A3B4C5D6E7F8091A2B3C4D5E /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

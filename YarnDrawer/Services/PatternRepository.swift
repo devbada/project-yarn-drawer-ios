@@ -113,14 +113,43 @@ actor PatternRepository {
 
     private var encoder: JSONEncoder {
         let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
+        encoder.dateEncodingStrategy = .custom { date, encoder in
+            var container = encoder.singleValueContainer()
+            try container.encode(date.timeIntervalSinceReferenceDate)
+        }
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         return encoder
     }
 
     private var decoder: JSONDecoder {
         let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            if let value = try? container.decode(Double.self) {
+                return Date(timeIntervalSinceReferenceDate: value)
+            }
+            let value = try container.decode(String.self)
+            if let date = Self.fractionalISO8601Formatter.date(from: value) ??
+                Self.iso8601Formatter.date(from: value)
+            {
+                return date
+            }
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Invalid ISO8601 date: \(value)"
+            )
+        }
         return decoder
     }
+
+    private static let fractionalISO8601Formatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [
+            .withInternetDateTime,
+            .withFractionalSeconds
+        ]
+        return formatter
+    }()
+
+    private static let iso8601Formatter = ISO8601DateFormatter()
 }
