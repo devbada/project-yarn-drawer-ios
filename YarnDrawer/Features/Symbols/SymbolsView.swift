@@ -1,10 +1,25 @@
 import SwiftUI
 
+private enum SymbolLibraryFilter: String, CaseIterable, Identifiable {
+    case all
+    case favorite
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .all: "전체"
+        case .favorite: "즐겨찾기"
+        }
+    }
+}
+
 struct SymbolsView: View {
     @EnvironmentObject private var store: PatternStore
     @Environment(\.openURL) private var openURL
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var query = ""
+    @State private var filter: SymbolLibraryFilter = .all
     @State private var toastMessage: String?
     @State private var pendingLinkSymbol: KnitSymbol?
     @State private var editorContext: SymbolEditorContext?
@@ -12,7 +27,7 @@ struct SymbolsView: View {
     @State private var detailSymbol: KnitSymbol?
 
     private var filteredSymbols: [KnitSymbol] {
-        store.commonSymbols(matching: query)
+        store.commonSymbols(matching: query, favoritesOnly: filter == .favorite)
     }
 
     var body: some View {
@@ -54,6 +69,14 @@ struct SymbolsView: View {
                     .overlay {
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
                             .stroke(YDColor.line, lineWidth: 1)
+                    }
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: YDSpacing.x2) {
+                            ForEach(SymbolLibraryFilter.allCases) { item in
+                                filterChip(item)
+                            }
+                        }
                     }
 
                     LazyVGrid(
@@ -157,6 +180,26 @@ struct SymbolsView: View {
                 }
             )
         }
+    }
+
+    private func filterChip(_ item: SymbolLibraryFilter) -> some View {
+        Button {
+            filter = item
+        } label: {
+            Text(item.title)
+                .font(YDFont.font(size: 13, weight: .bold))
+                .foregroundStyle(filter == item ? YDColor.cream0 : YDColor.muted)
+                .padding(.horizontal, 13)
+                .frame(minHeight: 38)
+                .background(filter == item ? YDColor.ink : YDColor.cream0)
+                .clipShape(Capsule())
+                .overlay {
+                    Capsule()
+                        .stroke(filter == item ? YDColor.ink : YDColor.line, lineWidth: 1)
+                }
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(filter == item ? .isSelected : [])
     }
 
     private func symbolCard(_ symbol: KnitSymbol) -> some View {
@@ -706,6 +749,7 @@ private struct SymbolCanvasView: View {
                         currentStroke = []
                     }
             )
+            .accessibilityIdentifier("symbolCanvas")
         }
     }
 

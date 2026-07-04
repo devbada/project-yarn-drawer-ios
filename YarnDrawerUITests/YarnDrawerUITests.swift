@@ -293,6 +293,154 @@ final class YarnDrawerUITests: XCTestCase {
         )
     }
 
+    /// 기호 라이브러리(`SymbolsView`)의 검색, 즐겨찾기 필터, 등록/수정/삭제 흐름을 검증한다.
+    /// Canvas 드로잉은 `symbolCanvas` 접근성 식별자를 기준으로 그 엘리먼트 자신의 좌표계에
+    /// 드래그해, 화면 레이아웃이 바뀌어도 깨지지 않게 한다.
+    func testSymbolLibrarySearchFilterAddEditDelete() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["YARN_DRAWER_UI_TEST_MODE"] = "1"
+        app.launchEnvironment["YARN_DRAWER_UI_TEST_RESET_DATA"] = "1"
+        app.launch()
+
+        XCTAssertTrue(app.staticTexts["내 도안"].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.buttons["기호"].waitForExistence(timeout: 5))
+        app.buttons["기호"].tap()
+
+        XCTAssertTrue(app.staticTexts["바늘비우기"].waitForExistence(timeout: 5))
+
+        let symbolName = "테스트 기호 \(Int.random(in: 1000...9999))"
+
+        app.buttons["새 기호 등록"].tap()
+        XCTAssertTrue(app.navigationBars["기호 등록"].waitForExistence(timeout: 5))
+
+        drawOnSymbolCanvas(app)
+
+        let nameField = app.textFields["예: 바늘비우기"]
+        XCTAssertTrue(nameField.waitForExistence(timeout: 5))
+        nameField.tap()
+        nameField.typeText(symbolName)
+
+        app.buttons["저장"].tap()
+
+        XCTAssertTrue(app.staticTexts["기호를 등록했습니다."].waitForExistence(timeout: 8))
+        XCTAssertTrue(
+            app.staticTexts[symbolName].waitForExistence(timeout: 5),
+            "새로 등록한 기호가 목록에 바로 보여야 한다"
+        )
+
+        // 검색: 새 기호 이름으로 검색하면 다른 기본 기호는 걸러져야 한다.
+        let searchField = app.textFields["기호명, 약어 검색"]
+        XCTAssertTrue(searchField.waitForExistence(timeout: 5))
+        searchField.tap()
+        searchField.typeText(symbolName)
+        XCTAssertTrue(app.staticTexts[symbolName].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["바늘비우기"].exists, "검색어와 무관한 기본 기호는 숨겨져야 한다")
+        clearTextField(searchField)
+
+        // 즐겨찾기 필터: 새 기호는 즐겨찾기가 아니므로 필터를 켜면 목록에서 빠져야 한다.
+        app.buttons["즐겨찾기"].tap()
+        XCTAssertFalse(
+            app.staticTexts[symbolName].exists,
+            "즐겨찾기 필터에서는 즐겨찾기하지 않은 새 기호가 보이면 안 된다"
+        )
+        XCTAssertTrue(
+            app.staticTexts["바늘비우기"].waitForExistence(timeout: 5),
+            "기본 즐겨찾기 기호는 즐겨찾기 필터에서도 보여야 한다"
+        )
+        app.buttons["전체"].tap()
+
+        // 수정: 상세로 들어가 수정 화면을 열면 이름과 그린 선이 그대로 남아있어야 한다.
+        XCTAssertTrue(app.staticTexts[symbolName].waitForExistence(timeout: 5))
+        app.staticTexts[symbolName].tap()
+        XCTAssertTrue(app.buttons["수정"].waitForExistence(timeout: 5))
+        app.buttons["수정"].tap()
+
+        XCTAssertTrue(app.navigationBars["기호 수정"].waitForExistence(timeout: 5))
+        let editingNameField = app.textFields["예: 바늘비우기"]
+        XCTAssertTrue(editingNameField.waitForExistence(timeout: 5))
+        XCTAssertEqual(editingNameField.value as? String, symbolName)
+        XCTAssertTrue(
+            app.staticTexts["그린 기호가 카드와 뷰어에 표시됩니다."].waitForExistence(timeout: 5),
+            "수정 화면을 다시 열어도 이전에 그린 획이 남아있어야 한다"
+        )
+        app.buttons["저장"].tap()
+        XCTAssertTrue(app.staticTexts["기호를 수정했습니다."].waitForExistence(timeout: 8))
+
+        // 삭제
+        XCTAssertTrue(app.staticTexts[symbolName].waitForExistence(timeout: 5))
+        app.staticTexts[symbolName].tap()
+        XCTAssertTrue(app.buttons["삭제"].waitForExistence(timeout: 5))
+        app.buttons["삭제"].tap()
+        XCTAssertTrue(app.buttons["삭제"].waitForExistence(timeout: 5))
+        app.buttons["삭제"].tap()
+
+        XCTAssertTrue(app.staticTexts["기호를 삭제했습니다."].waitForExistence(timeout: 8))
+        XCTAssertFalse(app.staticTexts[symbolName].exists, "삭제한 기호는 목록에서 사라져야 한다")
+    }
+
+    /// 뷰어의 현재 도안 기호 floating 패널이 하드코딩 없이 저장소 데이터를 쓰고, 새로 등록한
+    /// 도안 전용 기호가 패널을 벗어나지 않고 바로 반영되는지 확인한다.
+    func testViewerSymbolPanelReflectsPatternSpecificSymbolImmediately() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["YARN_DRAWER_UI_TEST_MODE"] = "1"
+        app.launchEnvironment["YARN_DRAWER_UI_TEST_RESET_DATA"] = "1"
+        app.launchEnvironment["YARN_DRAWER_UI_TEST_SEED_PDF"] = "1"
+        app.launch()
+
+        XCTAssertTrue(app.staticTexts["실사용 PDF 테스트 도안"].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.buttons["현재 도안 기호 열기"].waitForExistence(timeout: 8))
+        app.buttons["현재 도안 기호 열기"].tap()
+
+        XCTAssertTrue(app.navigationBars["현재 도안 기호"].waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            app.staticTexts["바늘비우기"].waitForExistence(timeout: 5),
+            "즐겨찾기한 공통 기호는 도안 기호 패널에도 보여야 한다"
+        )
+
+        let symbolName = "도안 전용 기호 \(Int.random(in: 1000...9999))"
+        app.buttons["등록"].tap()
+        XCTAssertTrue(app.navigationBars["기호 등록"].waitForExistence(timeout: 5))
+
+        drawOnSymbolCanvas(app)
+
+        let nameField = app.textFields["예: 바늘비우기"]
+        XCTAssertTrue(nameField.waitForExistence(timeout: 5))
+        nameField.tap()
+        nameField.typeText(symbolName)
+
+        app.buttons["저장"].tap()
+
+        XCTAssertTrue(app.staticTexts["기호를 등록했습니다."].waitForExistence(timeout: 8))
+        XCTAssertTrue(
+            app.staticTexts[symbolName].waitForExistence(timeout: 5),
+            "패널을 나가지 않고도 새로 만든 도안 전용 기호가 바로 보여야 한다"
+        )
+    }
+
+    /// 일반 SwiftUI `TextField`는 UIKit의 clear 버튼이 없으므로, 현재 값 길이만큼
+    /// backspace를 보내 지운다.
+    private func clearTextField(_ field: XCUIElement) {
+        field.tap()
+        guard let currentValue = field.value as? String, !currentValue.isEmpty else {
+            return
+        }
+        let deleteString = String(
+            repeating: XCUIKeyboardKey.delete.rawValue,
+            count: currentValue.count
+        )
+        field.typeText(deleteString)
+    }
+
+    private func drawOnSymbolCanvas(_ app: XCUIApplication) {
+        let canvas = app.otherElements["symbolCanvas"]
+        XCTAssertTrue(canvas.waitForExistence(timeout: 5), "기호 그리기 canvas를 찾지 못했다")
+        let start = canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.5))
+        let mid = canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2))
+        let end = canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: 0.5))
+        start.press(forDuration: 0.05, thenDragTo: mid)
+        mid.press(forDuration: 0.05, thenDragTo: end)
+    }
+
     private func attachScreenshot(_ app: XCUIApplication, image: UIImage, name: String) {
         let attachment = XCTAttachment(image: image)
         attachment.name = name

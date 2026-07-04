@@ -311,19 +311,27 @@ final class PatternStore: ObservableObject {
         try await viewerStateRepository.save(state)
     }
 
-    func commonSymbols(matching query: String = "") -> [KnitSymbol] {
+    func commonSymbols(matching query: String = "", favoritesOnly: Bool = false) -> [KnitSymbol] {
         symbols
-            .filter { $0.scope == .common && $0.matches(query) }
+            .filter { symbol in
+                symbol.scope == .common &&
+                    (!favoritesOnly || symbol.isFavorite) &&
+                    symbol.matches(query)
+            }
             .sorted(by: sortSymbols)
     }
 
+    /// 뷰어 floating 패널 전용 목록. 도안 전용 기호는 항상 전부 노출하지만, 공통 기호는
+    /// 즐겨찾기한 것만 보여준다(작업 중 참고용이라 전체 공통 기호를 늘어놓으면 오히려
+    /// 찾기 어렵다는 화면 명세 기준).
     func symbols(
         for patternID: PatternItem.ID,
         matching query: String = ""
     ) -> [KnitSymbol] {
         symbols
             .filter { symbol in
-                let matchesScope = symbol.scope == .common || symbol.patternID == patternID
+                let matchesScope = (symbol.scope == .common && symbol.isFavorite) ||
+                    symbol.patternID == patternID
                 return matchesScope && symbol.matches(query)
             }
             .sorted(by: sortSymbols)

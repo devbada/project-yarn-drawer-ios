@@ -11,6 +11,7 @@
 		0B416D50FB247D03E033DD8D /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1283EC9FCA02D964AA03584A /* SettingsView.swift */; };
 		0D5913E1C1D1449AA5A5E83A /* AnnotationRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B2E4CC4C41642ECBB71F37A /* AnnotationRepositoryTests.swift */; };
 		6585EEDADF23736674578325 /* FileAssetStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59377FA516980DEF769C1D3E /* FileAssetStoreTests.swift */; };
+		C30B156CB9BBE1DA0DFA1DFC /* PatternStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FA4CCBA9BA22F4310FB017A /* PatternStoreTests.swift */; };
 		12A4D61B8C2E4F6091A3B5C7 /* PatternRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93B5D71F2A4C6E8091B3D5F7 /* PatternRepositoryTests.swift */; };
 		1A2B3C4D5E6F708192A3B4C5 /* YarnDrawerUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F4E7A9B2C3D4E5F60718293 /* YarnDrawerUITests.swift */; };
 		18B6D42F7A9C1E30527496B8 /* ViewerStateRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4C6E82F1B3D507294B6D8F0 /* ViewerStateRepository.swift */; };
@@ -77,6 +78,7 @@
 		6D23D72E4762952860897C42 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		7B2E4CC4C41642ECBB71F37A /* AnnotationRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnotationRepositoryTests.swift; sourceTree = "<group>"; };
 		59377FA516980DEF769C1D3E /* FileAssetStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileAssetStoreTests.swift; sourceTree = "<group>"; };
+		2FA4CCBA9BA22F4310FB017A /* PatternStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternStoreTests.swift; sourceTree = "<group>"; };
 		818479110DAE2F306ADFBF8C /* PDFKitView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFKitView.swift; sourceTree = "<group>"; };
 		8BA3F901555B7F20E78192CA /* AnnotationModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnotationModelTests.swift; sourceTree = "<group>"; };
 		93B5D71F2A4C6E8091B3D5F7 /* PatternRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternRepositoryTests.swift; sourceTree = "<group>"; };
@@ -106,6 +108,7 @@
 				A20F0871BD9E5CC1424150EB /* GaugeCalculatorTests.swift */,
 				3AAFB80AF852898300F9808E /* PatternModelTests.swift */,
 				93B5D71F2A4C6E8091B3D5F7 /* PatternRepositoryTests.swift */,
+				2FA4CCBA9BA22F4310FB017A /* PatternStoreTests.swift */,
 				D714E6C193A34F1F8B24A915 /* SymbolRepositoryTests.swift */,
 				B5D7F9132C4E6082A4C6E8F0 /* ViewerStateRepositoryTests.swift */,
 			);
@@ -376,6 +379,7 @@
 				4419A79FC639EE078D68759C /* GaugeCalculatorTests.swift in Sources */,
 				5BBC65EB86959E26DFE35A92 /* PatternModelTests.swift in Sources */,
 				12A4D61B8C2E4F6091A3B5C7 /* PatternRepositoryTests.swift in Sources */,
+				C30B156CB9BBE1DA0DFA1DFC /* PatternStoreTests.swift in Sources */,
 				5F82EA7C91D34B50A6F4782D /* SymbolRepositoryTests.swift in Sources */,
 				1EC507294B6D8FA2C4E6081A /* ViewerStateRepositoryTests.swift in Sources */,
 			);
