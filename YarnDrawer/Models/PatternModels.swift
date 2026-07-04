@@ -57,6 +57,20 @@ enum PDFAnnotationTool {
     case eraser
 }
 
+enum CurrentRowAxis: String, Codable, CaseIterable, Identifiable {
+    case horizontal
+    case vertical
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .horizontal: "가로"
+        case .vertical: "세로"
+        }
+    }
+}
+
 enum HighlightColor: String, Codable, CaseIterable, Identifiable {
     case yellow
     case green
@@ -199,6 +213,26 @@ struct PatternAnnotation: Codable, Identifiable, Hashable {
     var isFreehandHighlight: Bool {
         (points?.count ?? 0) >= 2 && (normalizedLineWidth ?? 0) > 0
     }
+
+    var currentRowAxis: CurrentRowAxis {
+        guard type == .currentRow else {
+            return .horizontal
+        }
+        guard
+            let noteText,
+            noteText.hasPrefix(Self.currentRowAxisPrefix)
+        else {
+            return .horizontal
+        }
+        let rawValue = String(noteText.dropFirst(Self.currentRowAxisPrefix.count))
+        return CurrentRowAxis(rawValue: rawValue) ?? .horizontal
+    }
+
+    static func currentRowAxisNoteText(_ axis: CurrentRowAxis) -> String {
+        "\(currentRowAxisPrefix)\(axis.rawValue)"
+    }
+
+    private static let currentRowAxisPrefix = "yd-current-row-axis:"
 }
 
 struct PatternViewerState: Codable, Equatable {

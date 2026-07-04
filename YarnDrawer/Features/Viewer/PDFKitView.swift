@@ -8,6 +8,7 @@ struct PDFKitView: UIViewRepresentable {
     let showsAnnotations: Bool
     let allowsTextSelection: Bool
     let highlightHex: String
+    let currentRowAxis: CurrentRowAxis
     let initialPageIndex: Int
     let initialProgress: Double?
     let initialScaleFactor: Double?
@@ -113,6 +114,11 @@ struct PDFKitView: UIViewRepresentable {
             annotationTool == .check ||
             annotationTool == .note ||
             annotationTool == .currentRow
+        context.coordinator.clearSelectionIfSelectionIsDisabled(
+            annotationTool == .check ||
+            annotationTool == .note ||
+            annotationTool == .currentRow
+        )
         context.coordinator.configureScrolling(for: annotationTool == .highlight)
         context.coordinator.configureTextSelection(
             allowsTextSelection,
@@ -135,10 +141,12 @@ struct PDFKitView: UIViewRepresentable {
         private var movingAnnotation: PatternAnnotation?
         private weak var movingPage: PDFPage?
         private var movingTouchOffset = CGPoint.zero
+        private var currentRowDragMode: CurrentRowDragMode = .move
         private var selectedAnnotationID: PatternAnnotation.ID?
         private var currentAnnotations: [PatternAnnotation]
         private var showsAnnotations: Bool
         private var visibleOverlays: [Int: HighlightPageOverlayView] = [:]
+        private weak var currentRowControlView: CurrentRowControlView?
         private var isRestoringPage = false
         private var lastSavedScaleFactor: Double?
 
@@ -315,6 +323,7 @@ struct PDFKitView: UIViewRepresentable {
                !annotations.contains(where: { $0.id == selectedAnnotationID })
             {
                 self.selectedAnnotationID = nil
+                removeCurrentRowControls()
             }
 
             for (pageIndex, overlay) in visibleOverlays {
@@ -323,6 +332,7 @@ struct PDFKitView: UIViewRepresentable {
                     : []
                 overlay.selectedAnnotationID = self.selectedAnnotationID
             }
+            updateCurrentRowControls()
         }
 
         func pdfView(_ view: PDFView, overlayViewFor page: PDFPage) -> UIView? {
@@ -374,6 +384,7 @@ struct PDFKitView: UIViewRepresentable {
             guard pageIndex >= 0 else {
                 return
             }
+            updateCurrentRowControls()
             parent.onPageChanged(pageIndex)
         }
 
@@ -389,7 +400,14 @@ struct PDFKitView: UIViewRepresentable {
                 return
             }
             lastSavedScaleFactor = scale
+            updateCurrentRowControls()
             parent.onScaleChanged(scale)
+        }
+
+        func clearSelectionIfSelectionIsDisabled(_ isSelectionEnabled: Bool) {
+            if !isSelectionEnabled {
+                clearSelectedAnnotation()
+            }
         }
 
         func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
@@ -403,6 +421,7 @@ struct PDFKitView: UIViewRepresentable {
                 let tool = parent.annotationTool,
                 tool == .check || tool == .note || tool == .currentRow
             else {
+                removeCurrentRowControls()
                 return false
             }
             let location = gestureRecognizer.location(in: pdfView)
@@ -460,6 +479,7 @@ struct PDFKitView: UIViewRepresentable {
             }
             selectedAnnotationID = annotation.id
             updateOverlay(for: annotation.pageIndex)
+            updateCurrentRowControls()
         }
 
         @objc func handleMoveGesture(_ gesture: UIPanGestureRecognizer) {
@@ -644,6 +664,11 @@ struct PDFKitView: UIViewRepresentable {
             selectedAnnotationID = annotation.id
             movingAnnotation = annotation
             movingPage = page
+            currentRowDragMode = dragMode(
+                for: annotation,
+                at: pagePoint,
+                on: page
+            )
             movingTouchOffset = CGPoint(
                 x: pagePoint.x - rect.minX,
                 y: pagePoint.y - rect.minY
@@ -682,6 +707,7 @@ struct PDFKitView: UIViewRepresentable {
                 clearMoveState()
                 selectedAnnotationID = moved.id
                 updateOverlay(for: moved.pageIndex)
+                updateCurrentRowControls()
                 parent.onAnnotationMoved(moved)
             }
         }
@@ -697,18 +723,11 @@ struct PDFKitView: UIViewRepresentable {
             let movedRect: CGRect
 
             if annotation.type == .currentRow {
-                let y = min(
-                    max(
-                        pageBounds.minY,
-                        pagePoint.y - movingTouchOffset.y
-                    ),
-                    pageBounds.maxY - originalRect.height
-                )
-                movedRect = CGRect(
-                    x: pageBounds.minX,
-                    y: y,
-                    width: pageBounds.width,
-                    height: originalRect.height
+                movedRect = currentRowRect(
+                    from: originalRect,
+                    axis: annotation.currentRowAxis,
+                    pagePoint: pagePoint,
+                    pageBounds: pageBounds
                 )
             } else {
                 let x = min(
@@ -750,15 +769,128 @@ struct PDFKitView: UIViewRepresentable {
             )
         }
 
+        private func currentRowRect(
+            from originalRect: CGRect,
+            axis: CurrentRowAxis,
+            pagePoint: CGPoint,
+            pageBounds: CGRect
+        ) -> CGRect {
+            let minimumHorizontalThickness = pageBounds.height * 0.01
+            let minimumVerticalThickness = pageBounds.width * 0.01
+
+            switch (axis, currentRowDragMode) {
+            case (.horizontal, .move):
+                let y = min(
+                    max(pageBounds.minY, pagePoint.y - movingTouchOffset.y),
+                    pageBounds.maxY - originalRect.height
+                )
+                return CGRect(
+                    x: pageBounds.minX,
+                    y: y,
+                    width: pageBounds.width,
+                    height: originalRect.height
+                )
+            case (.horizontal, .resizeMinEdge):
+                let minY = min(
+                    max(pageBounds.minY, pagePoint.y),
+                    originalRect.maxY - minimumHorizontalThickness
+                )
+                return CGRect(
+                    x: pageBounds.minX,
+                    y: minY,
+                    width: pageBounds.width,
+                    height: originalRect.maxY - minY
+                )
+            case (.horizontal, .resizeMaxEdge):
+                let maxY = max(
+                    min(pageBounds.maxY, pagePoint.y),
+                    originalRect.minY + minimumHorizontalThickness
+                )
+                return CGRect(
+                    x: pageBounds.minX,
+                    y: originalRect.minY,
+                    width: pageBounds.width,
+                    height: maxY - originalRect.minY
+                )
+            case (.vertical, .move):
+                let x = min(
+                    max(pageBounds.minX, pagePoint.x - movingTouchOffset.x),
+                    pageBounds.maxX - originalRect.width
+                )
+                return CGRect(
+                    x: x,
+                    y: pageBounds.minY,
+                    width: originalRect.width,
+                    height: pageBounds.height
+                )
+            case (.vertical, .resizeMinEdge):
+                let minX = min(
+                    max(pageBounds.minX, pagePoint.x),
+                    originalRect.maxX - minimumVerticalThickness
+                )
+                return CGRect(
+                    x: minX,
+                    y: pageBounds.minY,
+                    width: originalRect.maxX - minX,
+                    height: pageBounds.height
+                )
+            case (.vertical, .resizeMaxEdge):
+                let maxX = max(
+                    min(pageBounds.maxX, pagePoint.x),
+                    originalRect.minX + minimumVerticalThickness
+                )
+                return CGRect(
+                    x: originalRect.minX,
+                    y: pageBounds.minY,
+                    width: maxX - originalRect.minX,
+                    height: pageBounds.height
+                )
+            }
+        }
+
+        private func dragMode(
+            for annotation: PatternAnnotation,
+            at pagePoint: CGPoint,
+            on page: PDFPage
+        ) -> CurrentRowDragMode {
+            guard annotation.type == .currentRow else {
+                return .move
+            }
+
+            let pageBounds = page.bounds(for: .cropBox)
+            let rect = annotation.bounds.rect(in: pageBounds)
+            switch annotation.currentRowAxis {
+            case .horizontal:
+                let threshold = max(pageBounds.height * 0.012, rect.height * 0.35)
+                if abs(pagePoint.y - rect.minY) <= threshold {
+                    return .resizeMinEdge
+                }
+                if abs(pagePoint.y - rect.maxY) <= threshold {
+                    return .resizeMaxEdge
+                }
+            case .vertical:
+                let threshold = max(pageBounds.width * 0.012, rect.width * 0.35)
+                if abs(pagePoint.x - rect.minX) <= threshold {
+                    return .resizeMinEdge
+                }
+                if abs(pagePoint.x - rect.maxX) <= threshold {
+                    return .resizeMaxEdge
+                }
+            }
+            return .move
+        }
+
         private func clearMoveState() {
             movingAnnotation = nil
             movingPage = nil
             movingTouchOffset = .zero
+            currentRowDragMode = .move
         }
 
         private func clearSelectedAnnotation() {
             let previousID = selectedAnnotationID
             selectedAnnotationID = nil
+            removeCurrentRowControls()
             guard
                 let previousID,
                 let previousPageIndex = currentAnnotations.first(
@@ -781,6 +913,7 @@ struct PDFKitView: UIViewRepresentable {
                 ? currentAnnotations.filter { $0.pageIndex == pageIndex }
                 : []
             overlay.selectedAnnotationID = selectedAnnotationID
+            updateCurrentRowControls()
         }
 
         private func existingNoteAnnotation(
@@ -876,6 +1009,156 @@ struct PDFKitView: UIViewRepresentable {
                         .insetBy(dx: -8, dy: -8)
                         .contains(pagePoint)
                 }
+        }
+
+        private func selectedCurrentRow() -> (annotation: PatternAnnotation, page: PDFPage)? {
+            guard
+                showsAnnotations,
+                let selectedAnnotationID,
+                let pdfView,
+                let document = pdfView.document,
+                let annotation = currentAnnotations.first(where: {
+                    $0.id == selectedAnnotationID && $0.type == .currentRow
+                }),
+                let page = document.page(at: annotation.pageIndex)
+            else {
+                return nil
+            }
+            return (annotation, page)
+        }
+
+        private func updateCurrentRowControls() {
+            guard
+                let pdfView,
+                let selected = selectedCurrentRow()
+            else {
+                removeCurrentRowControls()
+                return
+            }
+
+            let controlView: CurrentRowControlView
+            if let currentRowControlView {
+                controlView = currentRowControlView
+            } else {
+                let view = CurrentRowControlView()
+                view.onPrevious = { [weak self] in
+                    self?.moveSelectedCurrentRowByStep(.previous)
+                }
+                view.onNext = { [weak self] in
+                    self?.moveSelectedCurrentRowByStep(.next)
+                }
+                pdfView.addSubview(view)
+                currentRowControlView = view
+                controlView = view
+            }
+
+            let viewRect = viewRect(
+                for: selected.annotation,
+                on: selected.page,
+                in: pdfView
+            )
+            let size = CGSize(width: 132, height: 38)
+            let preferredY = viewRect.minY - size.height - 8
+            let fallbackY = viewRect.maxY + 8
+            let maxY = max(8, pdfView.bounds.maxY - size.height - 8)
+            let unclampedY = preferredY >= 8 ? preferredY : fallbackY
+            let y = min(max(8, unclampedY), maxY)
+            let maxX = max(8, pdfView.bounds.maxX - size.width - 8)
+            let x = min(
+                max(8, viewRect.midX - (size.width / 2)),
+                maxX
+            )
+            controlView.frame = CGRect(origin: CGPoint(x: x, y: y), size: size)
+        }
+
+        private func removeCurrentRowControls() {
+            currentRowControlView?.removeFromSuperview()
+            currentRowControlView = nil
+        }
+
+        private func moveSelectedCurrentRowByStep(_ direction: CurrentRowStepDirection) {
+            guard
+                let selected = selectedCurrentRow(),
+                let pdfView,
+                let document = pdfView.document
+            else {
+                return
+            }
+
+            let pageBounds = selected.page.bounds(for: .cropBox)
+            let rect = selected.annotation.bounds.rect(in: pageBounds)
+            let movedRect: CGRect
+            switch (selected.annotation.currentRowAxis, direction) {
+            case (.horizontal, .previous):
+                movedRect = CGRect(
+                    x: pageBounds.minX,
+                    y: max(pageBounds.minY, rect.minY - rect.height),
+                    width: pageBounds.width,
+                    height: rect.height
+                )
+            case (.horizontal, .next):
+                movedRect = CGRect(
+                    x: pageBounds.minX,
+                    y: min(pageBounds.maxY - rect.height, rect.minY + rect.height),
+                    width: pageBounds.width,
+                    height: rect.height
+                )
+            case (.vertical, .previous):
+                movedRect = CGRect(
+                    x: max(pageBounds.minX, rect.minX - rect.width),
+                    y: pageBounds.minY,
+                    width: rect.width,
+                    height: pageBounds.height
+                )
+            case (.vertical, .next):
+                movedRect = CGRect(
+                    x: min(pageBounds.maxX - rect.width, rect.minX + rect.width),
+                    y: pageBounds.minY,
+                    width: rect.width,
+                    height: pageBounds.height
+                )
+            }
+
+            guard let movedBounds = NormalizedRect(rect: movedRect, in: pageBounds) else {
+                return
+            }
+            let moved = PatternAnnotation(
+                id: selected.annotation.id,
+                type: selected.annotation.type,
+                pageIndex: document.index(for: selected.page),
+                bounds: movedBounds,
+                highlightColor: selected.annotation.highlightColor,
+                highlightHex: selected.annotation.highlightHex,
+                points: selected.annotation.points,
+                normalizedLineWidth: selected.annotation.normalizedLineWidth,
+                createdAt: selected.annotation.createdAt,
+                noteText: selected.annotation.noteText
+            )
+
+            currentAnnotations = currentAnnotations.map {
+                $0.id == moved.id ? moved : $0
+            }
+            updateOverlay(for: moved.pageIndex)
+            updateCurrentRowControls()
+            parent.onAnnotationMoved(moved)
+        }
+
+        private func viewRect(
+            for annotation: PatternAnnotation,
+            on page: PDFPage,
+            in pdfView: PDFView
+        ) -> CGRect {
+            let pageBounds = page.bounds(for: .cropBox)
+            let rect = annotation.bounds.rect(in: pageBounds)
+            let points = [
+                CGPoint(x: rect.minX, y: rect.minY),
+                CGPoint(x: rect.minX, y: rect.maxY),
+                CGPoint(x: rect.maxX, y: rect.minY),
+                CGPoint(x: rect.maxX, y: rect.maxY)
+            ].map { pdfView.convert($0, from: page) }
+            return points.reduce(CGRect.null) {
+                $0.union(CGRect(origin: $1, size: .zero))
+            }
         }
 
         @objc func handleHighlightGesture(_ gesture: UIPanGestureRecognizer) {
@@ -1076,13 +1359,25 @@ struct PDFKitView: UIViewRepresentable {
             document: PDFDocument
         ) -> PatternAnnotation? {
             let pageBounds = page.bounds(for: .cropBox)
-            let height = pageSize(forViewSize: 26, at: viewPoint, on: page).height
-            let rect = CGRect(
-                x: pageBounds.minX,
-                y: pagePoint.y - (height / 2),
-                width: pageBounds.width,
-                height: height
-            )
+            let axis = parent.currentRowAxis
+            let size = pageSize(forViewSize: 26, at: viewPoint, on: page)
+            let rect: CGRect
+            switch axis {
+            case .horizontal:
+                rect = CGRect(
+                    x: pageBounds.minX,
+                    y: pagePoint.y - (size.height / 2),
+                    width: pageBounds.width,
+                    height: size.height
+                )
+            case .vertical:
+                rect = CGRect(
+                    x: pagePoint.x - (size.width / 2),
+                    y: pageBounds.minY,
+                    width: size.width,
+                    height: pageBounds.height
+                )
+            }
             guard let bounds = NormalizedRect(rect: rect, in: pageBounds) else {
                 return nil
             }
@@ -1095,7 +1390,8 @@ struct PDFKitView: UIViewRepresentable {
                 highlightHex: nil,
                 points: nil,
                 normalizedLineWidth: nil,
-                createdAt: Date()
+                createdAt: Date(),
+                noteText: PatternAnnotation.currentRowAxisNoteText(axis)
             )
         }
 
@@ -1258,7 +1554,7 @@ private final class HighlightPageOverlayView: UIView {
                         alpha: 0.48
                     ).cgColor
                 )
-                context.fill(annotation.fixedCurrentRowRect(in: bounds))
+                context.fill(annotation.currentRowRect(in: bounds))
             }
         }
         context.restoreGState()
@@ -1281,7 +1577,7 @@ private final class HighlightPageOverlayView: UIView {
                 size: AnnotationDrawing.noteSize
             ).insetBy(dx: -6, dy: -6)
         case .currentRow:
-            selectionRect = annotation.fixedCurrentRowRect(in: bounds)
+            selectionRect = annotation.currentRowRect(in: bounds)
                 .insetBy(dx: 5, dy: -5)
         case .highlight:
             return
@@ -1301,7 +1597,50 @@ private final class HighlightPageOverlayView: UIView {
         )
         context.addPath(path.cgPath)
         context.fillPath()
+        if annotation.type == .currentRow {
+            drawCurrentRowHandles(for: annotation, in: context)
+        }
         context.restoreGState()
+    }
+
+    private func drawCurrentRowHandles(
+        for annotation: PatternAnnotation,
+        in context: CGContext
+    ) {
+        let rowRect = annotation.currentRowRect(in: bounds)
+        let handleColor = UIColor(YDColor.yarn4.opacity(0.86)).cgColor
+        context.setFillColor(handleColor)
+
+        switch annotation.currentRowAxis {
+        case .horizontal:
+            let width = min(88, max(38, rowRect.width * 0.18))
+            let height: CGFloat = 4
+            for y in [rowRect.minY, rowRect.maxY] {
+                let rect = CGRect(
+                    x: rowRect.midX - (width / 2),
+                    y: y - (height / 2),
+                    width: width,
+                    height: height
+                )
+                let path = UIBezierPath(roundedRect: rect, cornerRadius: height / 2)
+                context.addPath(path.cgPath)
+                context.fillPath()
+            }
+        case .vertical:
+            let width: CGFloat = 4
+            let height = min(88, max(38, rowRect.height * 0.18))
+            for x in [rowRect.minX, rowRect.maxX] {
+                let rect = CGRect(
+                    x: x - (width / 2),
+                    y: rowRect.midY - (height / 2),
+                    width: width,
+                    height: height
+                )
+                let path = UIBezierPath(roundedRect: rect, cornerRadius: width / 2)
+                context.addPath(path.cgPath)
+                context.fillPath()
+            }
+        }
     }
 
     private func drawCheck(
@@ -1405,7 +1744,76 @@ private final class HighlightPageOverlayView: UIView {
 private enum AnnotationDrawing {
     static let checkSize: CGFloat = 28
     static let noteSize: CGFloat = 28
-    static let currentRowHeight: CGFloat = 26
+}
+
+private enum CurrentRowDragMode {
+    case move
+    case resizeMinEdge
+    case resizeMaxEdge
+}
+
+private enum CurrentRowStepDirection {
+    case previous
+    case next
+}
+
+private final class CurrentRowControlView: UIView {
+    var onPrevious: (() -> Void)?
+    var onNext: (() -> Void)?
+
+    private let stackView = UIStackView()
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        configure()
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        configure()
+    }
+
+    private func configure() {
+        backgroundColor = UIColor(YDColor.ink.opacity(0.94))
+        layer.cornerRadius = 14
+        layer.masksToBounds = true
+
+        stackView.axis = .horizontal
+        stackView.distribution = .fillEqually
+        stackView.spacing = 1
+        stackView.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(stackView)
+
+        let previousButton = makeButton(title: "이전", action: #selector(handlePrevious))
+        let nextButton = makeButton(title: "이후", action: #selector(handleNext))
+        stackView.addArrangedSubview(previousButton)
+        stackView.addArrangedSubview(nextButton)
+
+        NSLayoutConstraint.activate([
+            stackView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            stackView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            stackView.topAnchor.constraint(equalTo: topAnchor),
+            stackView.bottomAnchor.constraint(equalTo: bottomAnchor)
+        ])
+    }
+
+    private func makeButton(title: String, action: Selector) -> UIButton {
+        let button = UIButton(type: .system)
+        button.setTitle(title, for: .normal)
+        button.setTitleColor(UIColor(YDColor.cream0), for: .normal)
+        button.titleLabel?.font = UIFont.systemFont(ofSize: 13, weight: .bold)
+        button.backgroundColor = UIColor.clear
+        button.addTarget(self, action: action, for: .touchUpInside)
+        return button
+    }
+
+    @objc private func handlePrevious() {
+        onPrevious?()
+    }
+
+    @objc private func handleNext() {
+        onNext?()
+    }
 }
 
 private extension UIColor {
@@ -1451,15 +1859,24 @@ private extension PatternAnnotation {
         )
     }
 
-    func fixedCurrentRowRect(in overlayBounds: CGRect) -> CGRect {
+    func currentRowRect(in overlayBounds: CGRect) -> CGRect {
         let rect = viewRect(in: overlayBounds)
-        let height = min(AnnotationDrawing.currentRowHeight, overlayBounds.height)
-        return CGRect(
-            x: 0,
-            y: rect.midY - (height / 2),
-            width: overlayBounds.width,
-            height: height
-        )
+        switch currentRowAxis {
+        case .horizontal:
+            return CGRect(
+                x: 0,
+                y: rect.minY,
+                width: overlayBounds.width,
+                height: max(1, rect.height)
+            )
+        case .vertical:
+            return CGRect(
+                x: rect.minX,
+                y: 0,
+                width: max(1, rect.width),
+                height: overlayBounds.height
+            )
+        }
     }
 }
 

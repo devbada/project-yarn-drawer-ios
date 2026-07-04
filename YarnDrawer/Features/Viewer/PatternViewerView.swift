@@ -1,6 +1,7 @@
 import SwiftUI
 
 private enum PatternTool: String, CaseIterable, Identifiable {
+    case view
     case highlight
     case eraser
     case check
@@ -11,6 +12,7 @@ private enum PatternTool: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
+        case .view: "보기"
         case .highlight: "형광펜"
         case .eraser: "지우개"
         case .check: "체크"
@@ -21,6 +23,7 @@ private enum PatternTool: String, CaseIterable, Identifiable {
 
     var icon: YDIcon? {
         switch self {
+        case .view: nil
         case .highlight: .highlight
         case .eraser: nil
         case .check: .check
@@ -73,12 +76,15 @@ struct PatternViewerView: View {
     @State private var redoStack: [[PatternAnnotation]] = []
     @State private var selectedHighlightHex = HighlightInk.presets[0].hex
     @State private var customHighlightColor = Color(hex: 0xF9A8D4)
+    @State private var currentRowAxis: CurrentRowAxis = .horizontal
     @AppStorage("viewerSelectedTool")
     private var storedSelectedTool = PatternTool.check.rawValue
     @AppStorage("viewerSelectedHighlightHex")
     private var storedSelectedHighlightHex = HighlightInk.presets[0].hex
     @AppStorage("highlightFavoriteHexes")
     private var highlightFavoriteHexes = ""
+    @AppStorage("viewerCurrentRowAxis")
+    private var storedCurrentRowAxis = CurrentRowAxis.horizontal.rawValue
 
     var body: some View {
         ZStack {
@@ -90,6 +96,9 @@ struct PatternViewerView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 if selectedTool == .highlight && !isOriginalMode {
                     highlightColorPicker
+                }
+                if selectedTool == .currentRow && !isOriginalMode {
+                    currentRowAxisPicker
                 }
                 viewerToolbar
             }
@@ -248,6 +257,7 @@ struct PatternViewerView: View {
                 showsAnnotations: !isOriginalMode,
                 allowsTextSelection: isOriginalMode,
                 highlightHex: selectedHighlightHex,
+                currentRowAxis: currentRowAxis,
                 initialPageIndex: initialPageIndex,
                 initialProgress: initialProgress,
                 initialScaleFactor: initialScaleFactor,
@@ -277,6 +287,9 @@ struct PatternViewerView: View {
                             .background(YDColor.wood1.opacity(0.94))
                             .clipShape(Capsule())
                             .padding(.top, YDSpacing.x3)
+                    } else if selectedTool == .view {
+                        Text("보기모드 · 표시 도구 꺼짐")
+                            .viewerGuideStyle()
                     } else if selectedTool == .check {
                         Text("탭: 체크 · 길게 누름: 선택 후 이동")
                             .viewerGuideStyle()
@@ -287,7 +300,7 @@ struct PatternViewerView: View {
                         Text("탭: 메모 · 길게 누름: 선택 후 이동")
                             .viewerGuideStyle()
                     } else if selectedTool == .currentRow {
-                        Text("탭: 현재 줄 · 길게 누름: 선택 후 이동")
+                        Text("탭: 현재 줄 · 길게 누름: 선택 · 가장자리 드래그: 크기 조절")
                             .viewerGuideStyle()
                     }
                 }
@@ -312,7 +325,9 @@ struct PatternViewerView: View {
             ForEach(PatternTool.allCases) { tool in
                 Button {
                     selectedTool = tool
-                    if tool == .highlight {
+                    if tool == .view {
+                        showToast("보기모드로 전환했습니다.")
+                    } else if tool == .highlight {
                         showToast("PDF 위를 한 손가락으로 드래그해 표시하세요.")
                     } else if tool == .eraser {
                         showToast("지울 표시를 누르세요.")
@@ -367,10 +382,40 @@ struct PatternViewerView: View {
     private func toolIcon(_ tool: PatternTool) -> some View {
         if let icon = tool.icon {
             YDIconView(icon: icon, size: 22)
+        } else if tool == .view {
+            Image(systemName: "eye")
+                .font(YDFont.symbol(size: 19, weight: .bold))
+                .frame(width: 22, height: 22)
         } else {
             Image(systemName: "eraser")
                 .font(YDFont.symbol(size: 19, weight: .bold))
                 .frame(width: 22, height: 22)
+        }
+    }
+
+    private var currentRowAxisPicker: some View {
+        HStack(spacing: YDSpacing.x3) {
+            Text("현재 줄 방향")
+                .font(YDFont.font(size: 12, weight: .bold))
+                .foregroundStyle(YDColor.muted)
+            Picker("현재 줄 방향", selection: $currentRowAxis) {
+                ForEach(CurrentRowAxis.allCases) { axis in
+                    Text(axis.title).tag(axis)
+                }
+            }
+            .pickerStyle(.segmented)
+            .frame(maxWidth: 190)
+            Spacer()
+        }
+        .padding(.horizontal, YDSpacing.x4)
+        .padding(.vertical, YDSpacing.x2)
+        .background(.ultraThinMaterial)
+        .overlay(alignment: .top) {
+            Rectangle().fill(YDColor.line).frame(height: 1)
+        }
+        .onChange(of: currentRowAxis) { _, axis in
+            storedCurrentRowAxis = axis.rawValue
+            showToast("\(axis.title) 현재 줄을 추가합니다.")
         }
     }
 
@@ -648,6 +693,7 @@ struct PatternViewerView: View {
             return nil
         }
         return switch selectedTool {
+        case .view: nil
         case .highlight: .highlight
         case .eraser: .eraser
         case .check: .check
@@ -693,6 +739,7 @@ struct PatternViewerView: View {
 
     private var toolResultMessage: String {
         switch selectedTool {
+        case .view: "보기모드로 전환했습니다."
         case .highlight: "형광펜 표시를 변경했습니다."
         case .eraser: "표시를 지웠습니다."
         case .check: "완료 체크를 변경했습니다."
@@ -737,6 +784,7 @@ struct PatternViewerView: View {
 
     private func restoreViewerToolPreferences() {
         selectedTool = PatternTool(rawValue: storedSelectedTool) ?? .check
+        currentRowAxis = CurrentRowAxis(rawValue: storedCurrentRowAxis) ?? .horizontal
         let hex = String(storedSelectedHighlightHex.filter(\.isHexDigit).prefix(6)).uppercased()
         guard hex.count == 6 else {
             return
@@ -1183,6 +1231,8 @@ private struct SamplePatternPaper: View {
     private func applyTool(at index: Int) {
         guard !isOriginalMode else { return }
         switch selectedTool {
+        case .view:
+            return
         case .highlight:
             lines[index].highlighted.toggle()
         case .eraser:

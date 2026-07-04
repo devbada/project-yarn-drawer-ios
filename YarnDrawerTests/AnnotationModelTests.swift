@@ -115,4 +115,39 @@ final class AnnotationModelTests: XCTestCase {
 
         XCTAssertEqual(decoded, annotations)
     }
+
+    func testCurrentRowAxisDefaultsToHorizontalAndPersistsVerticalMetadata() throws {
+        let bounds = try XCTUnwrap(
+            NormalizedRect(
+                rect: CGRect(x: 20, y: 0, width: 10, height: 100),
+                in: CGRect(x: 0, y: 0, width: 100, height: 100)
+            )
+        )
+        let legacyCurrentRow = PatternAnnotation(
+            id: UUID(),
+            type: .currentRow,
+            pageIndex: 0,
+            bounds: bounds,
+            highlightColor: nil,
+            highlightHex: nil,
+            points: nil,
+            normalizedLineWidth: nil,
+            createdAt: Date(timeIntervalSince1970: 3_000)
+        )
+        let verticalCurrentRow = PatternAnnotation(
+            id: UUID(),
+            type: .currentRow,
+            pageIndex: 0,
+            bounds: bounds,
+            highlightColor: nil,
+            highlightHex: nil,
+            points: nil,
+            normalizedLineWidth: nil,
+            createdAt: Date(timeIntervalSince1970: 4_000),
+            noteText: PatternAnnotation.currentRowAxisNoteText(.vertical)
+        )
+
+        XCTAssertEqual(legacyCurrentRow.currentRowAxis, .horizontal)
+        XCTAssertEqual(verticalCurrentRow.currentRowAxis, .vertical)
+    }
 }
