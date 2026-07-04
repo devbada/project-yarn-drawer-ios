@@ -531,7 +531,7 @@ private enum DetailsValidationField {
     case designerName
 }
 
-private struct PatternReconnectDocumentPicker: UIViewControllerRepresentable {
+struct PatternReconnectDocumentPicker: UIViewControllerRepresentable {
     let allowedContentTypes: [UTType]
     let onPick: (URL) -> Void
     let onFailure: () -> Void

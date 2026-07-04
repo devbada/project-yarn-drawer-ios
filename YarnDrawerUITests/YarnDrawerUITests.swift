@@ -62,7 +62,7 @@ final class YarnDrawerUITests: XCTestCase {
         mintSwatch.tap()
 
         let baselineState = try readDebugHighlightState(app)
-        XCTAssertEqual(baselineState.count, 0, "드래그 전에는 저장된 형광펜이 없어야 한다")
+        XCTAssertEqual(baselineState.highlightCount, 0, "드래그 전에는 저장된 형광펜이 없어야 한다")
 
         let beforeDragScreenshot = app.screenshot().image
         let baselineMintPixels = mintLikePixelCount(in: beforeDragScreenshot)
@@ -78,7 +78,7 @@ final class YarnDrawerUITests: XCTestCase {
 
         // 1) 저장된 annotation의 색상이 실제로 선택한 민트인지 디버그 훅으로 검증한다.
         let afterDragState = try readDebugHighlightState(app)
-        XCTAssertEqual(afterDragState.count, 1)
+        XCTAssertEqual(afterDragState.highlightCount, 1)
         XCTAssertEqual(
             afterDragState.lastHex,
             "80E5D2",
@@ -113,7 +113,7 @@ final class YarnDrawerUITests: XCTestCase {
 
         let afterRelaunchState = try readDebugHighlightState(relaunchedApp)
         XCTAssertEqual(
-            afterRelaunchState.count,
+            afterRelaunchState.highlightCount,
             1,
             "앱 재실행 후에도 저장된 형광펜 개수가 유지돼야 한다"
         )
@@ -146,9 +146,150 @@ final class YarnDrawerUITests: XCTestCase {
         )
         let afterSecondDragState = try readDebugHighlightState(relaunchedApp)
         XCTAssertEqual(
-            afterSecondDragState.count,
+            afterSecondDragState.highlightCount,
             2,
             "재실행 후에도 새 형광펜 드래그가 추가로 저장돼야 한다"
+        )
+    }
+
+    /// `PatternStore.viewURL(for:)`은 실제 파일 존재 여부와 무관하게 `pattern.viewAsset`만
+    /// 보고 URL을 만들기 때문에, `store.missingFilePatternIDs` 기준으로 판단하지 않으면
+    /// 파일이 실제로 사라져도 복구 화면이 뜨지 않는다(빈 PDFKitView만 보임). 이 회귀를
+    /// 막기 위해 `YARN_DRAWER_UI_TEST_SEED_MISSING_FILE`로 seed 직후 파일을 지운 상태를
+    /// 만들고, 복구 안내·진입점·재연결까지 실제로 동작하는지 검증한다.
+    func testMissingFileShowsRecoveryEntryPointAndReconnects() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["YARN_DRAWER_UI_TEST_MODE"] = "1"
+        app.launchEnvironment["YARN_DRAWER_UI_TEST_RESET_DATA"] = "1"
+        app.launchEnvironment["YARN_DRAWER_UI_TEST_SEED_PDF"] = "1"
+        app.launchEnvironment["YARN_DRAWER_UI_TEST_SEED_MISSING_FILE"] = "1"
+        app.launch()
+
+        XCTAssertTrue(app.staticTexts["실사용 PDF 테스트 도안"].waitForExistence(timeout: 8))
+        XCTAssertTrue(
+            app.staticTexts["작업용 파일을 열 수 없습니다."].waitForExistence(timeout: 8),
+            "파일이 실제로 없어졌을 때 복구 안내가 보여야 한다"
+        )
+        XCTAssertTrue(app.buttons["파일 다시 선택"].waitForExistence(timeout: 5))
+
+        // 시스템 문서 picker는 UI 테스트로 자동화하기 어려우므로, DEBUG 전용 훅으로
+        // 실제 재연결 파이프라인(store.reconnectPatternFile)을 바로 태운다.
+        let debugReconnectButton = app.buttons["테스트용 파일로 재연결"]
+        XCTAssertTrue(debugReconnectButton.waitForExistence(timeout: 5))
+        debugReconnectButton.tap()
+
+        XCTAssertTrue(
+            app.staticTexts["파일을 다시 연결했습니다."].waitForExistence(timeout: 8)
+        )
+        XCTAssertFalse(app.staticTexts["작업용 파일을 열 수 없습니다."].exists)
+        // PDFKit은 문서 텍스트를 StaticText가 아니라 Other 타입 접근성 요소로 노출한다.
+        XCTAssertTrue(
+            app.otherElements["1단: 겉뜨기 106코"].waitForExistence(timeout: 8),
+            "재연결 후 실제 문서 내용이 렌더링돼야 한다"
+        )
+    }
+
+    /// 저장이 실패했을 때 사용자가 인지하고 재시도할 수 있는 진입점이 실제로 동작하는지
+    /// `YARN_DRAWER_UI_TEST_FORCE_SAVE_FAILURE_COUNT`로 결정론적으로 검증한다.
+    func testSaveFailureShowsRetryEntryPointAndRecovers() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["YARN_DRAWER_UI_TEST_MODE"] = "1"
+        app.launchEnvironment["YARN_DRAWER_UI_TEST_RESET_DATA"] = "1"
+        app.launchEnvironment["YARN_DRAWER_UI_TEST_SEED_PDF"] = "1"
+        app.launchEnvironment["YARN_DRAWER_UI_TEST_FORCE_SAVE_FAILURE_COUNT"] = "1"
+        app.launch()
+
+        XCTAssertTrue(app.staticTexts["실사용 PDF 테스트 도안"].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.buttons["체크"].waitForExistence(timeout: 8))
+        app.buttons["체크"].tap()
+
+        let window = app.windows.firstMatch
+        window.coordinate(withNormalizedOffset: CGVector(dx: 0.4, dy: 0.4)).tap()
+
+        let retryButton = app.buttons["저장 다시 시도"]
+        XCTAssertTrue(
+            retryButton.waitForExistence(timeout: 8),
+            "저장 실패 상태에서는 탭 가능한 재시도 진입점이 보여야 한다"
+        )
+
+        retryButton.tap()
+
+        // 성공 토스트는 일정 시간 뒤 자동으로 사라지는 일시적 신호라 타이밍에 취약하다.
+        // 실제로 중요한 건 지속되는 상태 표시이므로, 재시도 버튼이 사라지고 정상 상태
+        // 문구로 돌아오는지를 기준으로 검증한다(요구사항: toast만으로 전달하지 말 것).
+        let normalStatus = app.staticTexts["편집 상태 · 저장됨"]
+        XCTAssertTrue(
+            normalStatus.waitForExistence(timeout: 8),
+            "재시도가 성공하면 지속 상태 문구가 정상 저장 상태로 돌아와야 한다"
+        )
+        XCTAssertFalse(
+            app.buttons["저장 다시 시도"].exists,
+            "재시도가 성공하면 실패 상태/재시도 버튼이 사라져야 한다"
+        )
+    }
+
+    /// 회귀 검증: 첫 번째 annotation 저장이 실패한 뒤, 사용자가 재시도 버튼을 누르지 않고
+    /// 바로 두 번째 annotation을 추가해도 두 변경 모두 유지돼야 한다. 이전 구현은
+    /// 새 편집을 시작할 때마다 `annotationSaveFailed`를 무조건 false로 지우고, 첫 저장
+    /// 실패 이후 후속 편집도 여전히 단일 append 경로를 탔기 때문에 첫 번째(실패한) 변경이
+    /// 파일에 기록되지 못한 채 "저장됨" 상태로 되돌아갈 수 있었다.
+    func testUnretriedEditAfterSaveFailureIsNotLostAndPersistsAfterRelaunch() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["YARN_DRAWER_UI_TEST_MODE"] = "1"
+        app.launchEnvironment["YARN_DRAWER_UI_TEST_RESET_DATA"] = "1"
+        app.launchEnvironment["YARN_DRAWER_UI_TEST_SEED_PDF"] = "1"
+        app.launchEnvironment["YARN_DRAWER_UI_TEST_FORCE_SAVE_FAILURE_COUNT"] = "1"
+        app.launch()
+
+        XCTAssertTrue(app.staticTexts["실사용 PDF 테스트 도안"].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.buttons["체크"].waitForExistence(timeout: 8))
+        app.buttons["체크"].tap()
+
+        let window = app.windows.firstMatch
+
+        // 첫 번째 체크: 강제로 저장이 실패해야 한다.
+        window.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.32)).tap()
+        let retryButton = app.buttons["저장 다시 시도"]
+        XCTAssertTrue(
+            retryButton.waitForExistence(timeout: 8),
+            "첫 번째 저장은 강제로 실패해야 한다"
+        )
+
+        // 재시도 버튼을 누르지 않고, 서로 겹치지 않는 다른 위치에 두 번째 체크를 추가한다.
+        window.coordinate(withNormalizedOffset: CGVector(dx: 0.65, dy: 0.55)).tap()
+
+        // 두 번째 저장은 강제 실패 카운터가 이미 소진돼 성공해야 하고, 그 성공은
+        // 전체 snapshot 저장이어야 하므로 첫 번째(이전에 실패한) 체크까지 함께 기록돼야 한다.
+        XCTAssertTrue(
+            app.staticTexts["편집 상태 · 저장됨"].waitForExistence(timeout: 8),
+            "두 번째 저장이 성공하면 실패 상태가 해소돼야 한다"
+        )
+        XCTAssertFalse(app.buttons["저장 다시 시도"].exists)
+
+        let stateBeforeRelaunch = try readDebugHighlightState(app)
+        XCTAssertEqual(
+            stateBeforeRelaunch.total,
+            2,
+            "재시도 없이 이어간 두 번째 편집이 성공하면 두 annotation이 모두 메모리에 있어야 한다"
+        )
+
+        app.terminate()
+
+        let relaunchedApp = XCUIApplication()
+        relaunchedApp.launchEnvironment["YARN_DRAWER_UI_TEST_MODE"] = "1"
+        relaunchedApp.launch()
+
+        XCTAssertTrue(relaunchedApp.staticTexts["내 도안"].waitForExistence(timeout: 8))
+        let reopenButton = relaunchedApp.buttons["실사용 PDF 테스트 도안 도안 열기"]
+        XCTAssertTrue(reopenButton.waitForExistence(timeout: 8))
+        reopenButton.tap()
+
+        XCTAssertTrue(relaunchedApp.staticTexts["실사용 PDF 테스트 도안"].waitForExistence(timeout: 8))
+        let stateAfterRelaunch = try readDebugHighlightState(relaunchedApp)
+        XCTAssertEqual(
+            stateAfterRelaunch.total,
+            2,
+            "첫 번째 저장 실패 이후 재시도 없이 이어간 편집도 앱을 완전히 재실행한 뒤 모두 남아 있어야 한다"
         )
     }
 
@@ -160,12 +301,13 @@ final class YarnDrawerUITests: XCTestCase {
     }
 
     /// `PatternViewerView`가 `#if DEBUG` + `YARN_DRAWER_UI_TEST_MODE`일 때만 노출하는
-    /// `debugHighlightState` 접근성 요소에서 "highlightCount=N;lastHighlightHex=XXXXXX" 형식의
-    /// 문자열을 읽어 파싱한다. 일반 빌드/릴리즈에서는 이 요소 자체가 존재하지 않는다.
+    /// `debugHighlightState` 접근성 요소에서 "totalCount=N;highlightCount=N;lastHighlightHex=XXXXXX"
+    /// 형식의 문자열을 읽어 파싱한다. `total`은 형광펜이 아닌 체크/메모/현재 줄 등을 포함한
+    /// 전체 annotation 개수다. 일반 빌드/릴리즈에서는 이 요소 자체가 존재하지 않는다.
     private func readDebugHighlightState(
         _ app: XCUIApplication,
         timeout: TimeInterval = 8
-    ) throws -> (count: Int, lastHex: String) {
+    ) throws -> (total: Int, highlightCount: Int, lastHex: String) {
         let element = app.staticTexts.matching(identifier: "debugHighlightState").firstMatch
         XCTAssertTrue(
             element.waitForExistence(timeout: timeout),
@@ -180,14 +322,16 @@ final class YarnDrawerUITests: XCTestCase {
                 result[String(keyValue[0])] = String(keyValue[1])
             }
         guard
-            let countString = parts["highlightCount"],
-            let count = Int(countString),
+            let totalString = parts["totalCount"],
+            let total = Int(totalString),
+            let highlightCountString = parts["highlightCount"],
+            let highlightCount = Int(highlightCountString),
             let lastHex = parts["lastHighlightHex"]
         else {
             XCTFail("디버그 상태 문자열을 파싱하지 못했다: \(label)")
-            return (0, "")
+            return (0, 0, "")
         }
-        return (count, lastHex)
+        return (total, highlightCount, lastHex)
     }
 
     /// 스크린샷에서 형광펜 색(민트, `80E5D2`, alpha 0.48로 흰 배경 위에 합성됨 ≈ RGB(194,233,243))과

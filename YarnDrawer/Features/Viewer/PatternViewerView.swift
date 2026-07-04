@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 private enum PatternTool: String, CaseIterable, Identifiable {
     case view
@@ -77,6 +78,9 @@ struct PatternViewerView: View {
     @State private var selectedHighlightHex = HighlightInk.presets[0].hex
     @State private var customHighlightColor = Color(hex: 0xF9A8D4)
     @State private var currentRowAxis: CurrentRowAxis = .horizontal
+    @State private var showsMissingDocumentReconnectPicker = false
+    @State private var isReconnectingMissingDocument = false
+    @State private var missingDocumentReconnectError: String?
     @AppStorage("viewerSelectedTool")
     private var storedSelectedTool = PatternTool.check.rawValue
     @AppStorage("viewerSelectedHighlightHex")
@@ -92,6 +96,9 @@ struct PatternViewerView: View {
 
             VStack(spacing: 0) {
                 viewerTopBar
+                if isChecksumMismatched {
+                    checksumMismatchBanner
+                }
                 documentArea
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 if selectedTool == .highlight && !isOriginalMode {
@@ -206,6 +213,15 @@ struct PatternViewerView: View {
         } message: {
             Text("현재 작업을 저장한 뒤 요청한 동작을 계속합니다.")
         }
+        .sheet(isPresented: $showsMissingDocumentReconnectPicker) {
+            PatternReconnectDocumentPicker(
+                allowedContentTypes: [.pdf, .jpeg, .png],
+                onPick: reconnectMissingDocument,
+                onFailure: {
+                    missingDocumentReconnectError = "파일을 다시 선택하지 못했습니다."
+                }
+            )
+        }
         .alert("메모", isPresented: $showsNoteEditor) {
             TextField("메모 내용", text: $noteText)
             Button("취소", role: .cancel) {
@@ -235,10 +251,21 @@ struct PatternViewerView: View {
                     .font(YDFont.font(size: 14, weight: .bold))
                     .foregroundStyle(YDColor.ink)
                     .lineLimit(1)
-                Text(viewerStatus)
-                    .font(YDFont.font(size: 11, weight: .bold))
-                    .foregroundStyle(YDColor.yarn4)
-                    .accessibilityLabel(viewerStatus)
+                if annotationSaveFailed {
+                    Button(action: retrySaveAnnotations) {
+                        Text(viewerStatus)
+                            .font(YDFont.font(size: 11, weight: .bold))
+                            .foregroundStyle(YDColor.danger)
+                            .underline()
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("저장 다시 시도")
+                } else {
+                    Text(viewerStatus)
+                        .font(YDFont.font(size: 11, weight: .bold))
+                        .foregroundStyle(YDColor.yarn4)
+                        .accessibilityLabel(viewerStatus)
+                }
             }
             Spacer()
             YDIconButton(icon: .more, accessibilityLabel: "도안 도구") {
@@ -255,7 +282,9 @@ struct PatternViewerView: View {
 
     @ViewBuilder
     private var documentArea: some View {
-        if let viewURL {
+        if isFileMissing {
+            missingDocumentArea
+        } else if let viewURL {
             PDFKitView(
                 url: viewURL,
                 annotations: annotations,
@@ -322,7 +351,67 @@ struct PatternViewerView: View {
         } else if isDocumentLoading {
             DocumentLoadingView()
         } else {
-            MissingDocumentView()
+            missingDocumentArea
+        }
+    }
+
+    private var isFileMissing: Bool {
+        !pattern.isSample && store.missingFilePatternIDs.contains(pattern.id)
+    }
+
+    private var isChecksumMismatched: Bool {
+        !pattern.isSample && store.checksumMismatchPatternIDs.contains(pattern.id)
+    }
+
+    @ViewBuilder
+    private var missingDocumentArea: some View {
+        ZStack(alignment: .bottom) {
+            MissingDocumentView(
+                isReconnecting: isReconnectingMissingDocument,
+                errorMessage: missingDocumentReconnectError,
+                onReconnectTapped: {
+                    showsMissingDocumentReconnectPicker = true
+                }
+            )
+            #if DEBUG
+            if isUITestDebugStateEnabled {
+                debugReconnectFixtureButton
+                    .padding(.bottom, YDSpacing.x6)
+            }
+            #endif
+        }
+    }
+
+    private var checksumMismatchBanner: some View {
+        HStack(spacing: YDSpacing.x2) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(YDColor.danger)
+            Text("저장된 파일이 등록 시점과 다릅니다. 상세정보에서 파일을 다시 선택해 복구하세요.")
+                .font(YDFont.font(size: 12, weight: .bold))
+                .foregroundStyle(YDColor.danger)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.horizontal, YDSpacing.x4)
+        .padding(.vertical, YDSpacing.x2)
+        .background(YDColor.danger.opacity(0.1))
+    }
+
+    private func reconnectMissingDocument(_ url: URL) {
+        isReconnectingMissingDocument = true
+        missingDocumentReconnectError = nil
+        Task {
+            defer { isReconnectingMissingDocument = false }
+            do {
+                try await store.reconnectPatternFile(sourceURL: url, for: pattern.id)
+                if let refreshed = store.pattern(id: pattern.id) {
+                    viewURL = await store.viewURL(for: refreshed)
+                }
+                isDocumentLoading = false
+                showToast("파일을 다시 연결했습니다.")
+            } catch {
+                missingDocumentReconnectError = (error as? LocalizedError)?.errorDescription
+                    ?? "파일을 다시 연결하지 못했습니다."
+            }
         }
     }
 
@@ -689,7 +778,7 @@ struct PatternViewerView: View {
             return "편집 상태 · 자동 저장 중"
         }
         if annotationSaveFailed {
-            return "편집 상태 · 저장 실패"
+            return "편집 상태 · 저장 실패 · 탭해서 다시 시도"
         }
         return isDirty ? "편집 상태 · 변경사항 있음" : "편집 상태 · 저장됨"
     }
@@ -844,13 +933,18 @@ struct PatternViewerView: View {
         }
         annotations.append(annotation)
         isDirty = true
-        annotationSaveFailed = false
+        // 이전 저장이 실패한 상태였다면 그 실패가 아직 저장소에 반영되지 못한 변경을
+        // 메모리에 남기고 있을 수 있다. 그 상태에서 단일 append만 하면 이전 변경이
+        // 파일에 영영 누락될 수 있으므로, 이번 저장은 전체 snapshot으로 처리해
+        // 이전 변경까지 함께 보존한다. 실패 상태 자체도 이번 저장이 실제로
+        // 성공했다고 확인되기 전까지는 지우지 않는다(아래 성공 분기에서만 해제).
+        let mustUseFullSnapshot = annotationSaveFailed
         pendingAnnotationSaveCount += 1
         showToast("\(annotation.type.saveTitleWithObjectParticle) 자동 저장합니다.")
 
         Task {
             do {
-                if annotation.type == .currentRow {
+                if annotation.type == .currentRow || mustUseFullSnapshot {
                     try await store.saveAnnotations(annotations, for: pattern.id)
                 } else {
                     try await store.addAnnotation(annotation, to: pattern.id)
@@ -858,6 +952,7 @@ struct PatternViewerView: View {
                 if annotation.type == .check {
                     try await store.updateProgress(progress(for: annotation), for: pattern.id)
                 }
+                annotationSaveFailed = false
                 pendingAnnotationSaveCount = max(0, pendingAnnotationSaveCount - 1)
                 if pendingAnnotationSaveCount == 0 {
                     isDirty = false
@@ -879,7 +974,6 @@ struct PatternViewerView: View {
         recordAnnotationHistory()
         annotations.removeAll { $0.id == annotation.id }
         isDirty = true
-        annotationSaveFailed = false
         pendingAnnotationSaveCount += 1
         showToast("\(annotation.type.saveTitleWithObjectParticle) 삭제합니다.")
 
@@ -889,6 +983,7 @@ struct PatternViewerView: View {
                 if annotation.type == .check {
                     try await store.updateProgress(latestCheckProgress ?? 0, for: pattern.id)
                 }
+                annotationSaveFailed = false
                 pendingAnnotationSaveCount = max(0, pendingAnnotationSaveCount - 1)
                 if pendingAnnotationSaveCount == 0 {
                     isDirty = false
@@ -910,7 +1005,6 @@ struct PatternViewerView: View {
         recordAnnotationHistory()
         annotations[index] = annotation
         isDirty = true
-        annotationSaveFailed = false
         pendingAnnotationSaveCount += 1
         showToast("\(annotation.type.saveTitleWithObjectParticle) 이동합니다.")
 
@@ -920,6 +1014,7 @@ struct PatternViewerView: View {
                 if annotation.type == .check {
                     try await store.updateProgress(progress(for: annotation), for: pattern.id)
                 }
+                annotationSaveFailed = false
                 pendingAnnotationSaveCount = max(0, pendingAnnotationSaveCount - 1)
                 if pendingAnnotationSaveCount == 0 {
                     isDirty = false
@@ -992,7 +1087,6 @@ struct PatternViewerView: View {
         updatesProgress: Bool = false
     ) {
         isDirty = true
-        annotationSaveFailed = false
         pendingAnnotationSaveCount += 1
         showToast(startedMessage)
 
@@ -1002,6 +1096,7 @@ struct PatternViewerView: View {
                 if updatesProgress {
                     try await store.updateProgress(latestCheckProgress ?? 0, for: pattern.id)
                 }
+                annotationSaveFailed = false
                 pendingAnnotationSaveCount = max(0, pendingAnnotationSaveCount - 1)
                 if pendingAnnotationSaveCount == 0 {
                     isDirty = false
@@ -1052,7 +1147,34 @@ struct PatternViewerView: View {
             } catch {
                 annotationSaveFailed = true
                 isDirty = true
-                showToast("형광펜 표시를 저장하지 못했습니다.")
+                showToast("변경사항을 저장하지 못했습니다. 상단 상태를 눌러 다시 시도해 주세요.")
+            }
+        }
+    }
+
+    /// 저장 실패 상태에서 사용자가 직접 다시 시도할 수 있는 진입점.
+    /// 성공하면 닫기/원본 보기 전환처럼 보류 중이던 동작(`protectedAction`)이 있을 때
+    /// 그 동작까지 이어서 완료해, 실패 때문에 조용히 무시된 요청이 남지 않게 한다.
+    private func retrySaveAnnotations() {
+        guard annotationSaveFailed else {
+            return
+        }
+        pendingAnnotationSaveCount += 1
+        showToast("저장을 다시 시도합니다.")
+        Task {
+            do {
+                try await store.saveAnnotations(annotations, for: pattern.id)
+                pendingAnnotationSaveCount = max(0, pendingAnnotationSaveCount - 1)
+                annotationSaveFailed = false
+                if pendingAnnotationSaveCount == 0 {
+                    isDirty = false
+                }
+                showToast("저장을 다시 시도해 성공했습니다.")
+                performProtectedAction()
+            } catch {
+                pendingAnnotationSaveCount = max(0, pendingAnnotationSaveCount - 1)
+                annotationSaveFailed = true
+                showToast("다시 시도했지만 저장하지 못했습니다.")
             }
         }
     }
@@ -1085,7 +1207,10 @@ struct PatternViewerView: View {
         let lastHex = highlights
             .max { $0.createdAt < $1.createdAt }?
             .resolvedHighlightHex ?? "none"
-        return "highlightCount=\(highlights.count);lastHighlightHex=\(lastHex)"
+        // totalCount는 형광펜이 아닌 체크/메모/현재 줄 등도 포함한 전체 annotation
+        // 개수로, 저장 실패 이후 재시도 없이 이어간 편집이 실제로 유지되는지
+        // (형광펜이 아닌 도구를 쓴 경우까지) 검증할 수 있도록 별도로 노출한다.
+        return "totalCount=\(annotations.count);highlightCount=\(highlights.count);lastHighlightHex=\(lastHex)"
     }
 
     private var debugHighlightStateView: some View {
@@ -1094,6 +1219,24 @@ struct PatternViewerView: View {
             .opacity(0.01)
             .accessibilityIdentifier("debugHighlightState")
             .allowsHitTesting(false)
+    }
+
+    /// 파일 누락 화면에서 시스템 문서 picker를 거치지 않고 바로 재연결을 검증하기 위한
+    /// 디버그 전용 버튼. `YARN_DRAWER_UI_TEST_MODE`일 때만 나타나며 일반 빌드에는 없다.
+    private var debugReconnectFixtureButton: some View {
+        Button("테스트용 파일로 재연결") {
+            guard let fixtureURL = UITestPDFFixture.makeSamplePDF() else {
+                return
+            }
+            reconnectMissingDocument(fixtureURL)
+        }
+        .font(YDFont.font(size: 12, weight: .bold))
+        .foregroundStyle(YDColor.cream0)
+        .padding(.horizontal, YDSpacing.x3)
+        .frame(minHeight: 36)
+        .background(YDColor.wood3)
+        .clipShape(Capsule())
+        .accessibilityIdentifier("debugReconnectWithFixture")
     }
     #endif
 }
@@ -1184,16 +1327,42 @@ private struct DocumentLoadingView: View {
 }
 
 private struct MissingDocumentView: View {
+    let isReconnecting: Bool
+    let errorMessage: String?
+    let onReconnectTapped: () -> Void
+
     var body: some View {
         VStack(spacing: YDSpacing.x3) {
             YDIconView(icon: .storage, size: 34)
                 .foregroundStyle(YDColor.wood3)
-            Text("작업용 PDF를 열 수 없습니다.")
+            Text("작업용 파일을 열 수 없습니다.")
                 .font(YDFont.font(size: 15, weight: .bold))
                 .foregroundStyle(YDColor.ink)
-            Text("상세정보에서 파일을 다시 선택해 복구할 수 있습니다.")
+            Text("원본 파일이 없어졌거나 이동됐습니다. 파일을 다시 선택하면 복구할 수 있습니다.")
                 .font(YDFont.font(size: 12))
                 .foregroundStyle(YDColor.muted)
+                .multilineTextAlignment(.center)
+
+            if let errorMessage {
+                Text(errorMessage)
+                    .font(YDFont.font(size: 12, weight: .bold))
+                    .foregroundStyle(YDColor.danger)
+                    .multilineTextAlignment(.center)
+                    .padding(.top, YDSpacing.x1)
+            }
+
+            Button(action: onReconnectTapped) {
+                Text(isReconnecting ? "다시 연결하는 중..." : "파일 다시 선택")
+                    .font(YDFont.font(size: 14, weight: .heavy))
+                    .foregroundStyle(YDColor.cream0)
+                    .frame(minWidth: 180, minHeight: YDLayout.minimumTouchTarget)
+                    .background(YDColor.ink)
+                    .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+            .disabled(isReconnecting)
+            .accessibilityLabel("파일 다시 선택")
+            .padding(.top, YDSpacing.x2)
         }
         .padding(YDSpacing.x6)
         .frame(maxWidth: .infinity, maxHeight: .infinity)

@@ -28,6 +28,9 @@ struct YarnDrawerApp: App {
                         #if DEBUG
                         if ProcessInfo.processInfo.environment["YARN_DRAWER_UI_TEST_SEED_PDF"] == "1" {
                             await seedUITestPDFPattern()
+                            if ProcessInfo.processInfo.environment["YARN_DRAWER_UI_TEST_SEED_MISSING_FILE"] == "1" {
+                                await deleteSeededPatternFileForTesting()
+                            }
                         }
                         #endif
                     } else {
@@ -52,6 +55,20 @@ struct YarnDrawerApp: App {
             )
         )
         try? FileManager.default.removeItem(at: sourceURL)
+    }
+
+    /// 파일 누락 복구 화면(`MissingDocumentView`)을 결정론적으로 재현하기 위해,
+    /// 방금 seed한 실제 PDF 패턴의 실제 파일만 디스크에서 지운다. `viewAsset` 메타데이터는
+    /// 그대로 남아있으므로 `store.load()`로 `missingFilePatternIDs`를 다시 계산해야 한다.
+    private func deleteSeededPatternFileForTesting() async {
+        guard
+            let seeded = store.patterns.first(where: { $0.title == UITestPDFFixture.patternTitle }),
+            let url = await store.viewURL(for: seeded)
+        else {
+            return
+        }
+        try? FileManager.default.removeItem(at: url)
+        await store.load()
     }
     #endif
 }

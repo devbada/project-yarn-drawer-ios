@@ -35,16 +35,20 @@ actor FileAssetStore {
     private let appRootURL: URL
     private let patternsRootURL: URL
 
-    init(fileManager: FileManager = .default) {
+    init(fileManager: FileManager = .default, rootURL: URL? = nil) {
         self.fileManager = fileManager
-        let applicationSupport = fileManager.urls(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask
-        )[0]
-        appRootURL = applicationSupport.appending(
-            path: "YarnDrawer",
-            directoryHint: .isDirectory
-        )
+        if let rootURL {
+            appRootURL = rootURL
+        } else {
+            let applicationSupport = fileManager.urls(
+                for: .applicationSupportDirectory,
+                in: .userDomainMask
+            )[0]
+            appRootURL = applicationSupport.appending(
+                path: "YarnDrawer",
+                directoryHint: .isDirectory
+            )
+        }
         patternsRootURL = appRootURL.appending(path: "patterns", directoryHint: .isDirectory)
     }
 

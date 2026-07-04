@@ -9,6 +9,9 @@ enum PatternStoreError: LocalizedError {
     case invalidSymbolName
     case invalidSymbolLink
     case systemSymbolEditNotAllowed
+    #if DEBUG
+    case forcedTestSaveFailure
+    #endif
 
     var errorDescription: String? {
         switch self {
@@ -28,6 +31,10 @@ enum PatternStoreError: LocalizedError {
             "외부 링크는 https 주소로 입력해 주세요."
         case .systemSymbolEditNotAllowed:
             "기본 기호는 삭제할 수 없습니다."
+        #if DEBUG
+        case .forcedTestSaveFailure:
+            "테스트용으로 강제된 저장 실패입니다."
+        #endif
         }
     }
 }
@@ -270,6 +277,9 @@ final class PatternStore: ObservableObject {
         _ annotation: PatternAnnotation,
         to patternID: PatternItem.ID
     ) async throws {
+        #if DEBUG
+        try Self.consumeForcedSaveFailureIfNeeded()
+        #endif
         try await annotationRepository.append(annotation, patternID: patternID)
     }
 
@@ -277,6 +287,9 @@ final class PatternStore: ObservableObject {
         _ annotations: [PatternAnnotation],
         for patternID: PatternItem.ID
     ) async throws {
+        #if DEBUG
+        try Self.consumeForcedSaveFailureIfNeeded()
+        #endif
         try await annotationRepository.save(annotations, patternID: patternID)
     }
 
@@ -415,4 +428,21 @@ final class PatternStore: ObservableObject {
         missingFilePatternIDs = await fileAssetStore.missingFilePatternIDs(for: patterns)
         checksumMismatchPatternIDs = await fileAssetStore.checksumMismatchPatternIDs(for: patterns)
     }
+
+    #if DEBUG
+    /// UI 테스트가 저장 실패 → 재시도 흐름을 결정론적으로 검증할 수 있도록,
+    /// `YARN_DRAWER_UI_TEST_FORCE_SAVE_FAILURE_COUNT`로 지정한 횟수만큼만
+    /// annotation 저장을 강제로 실패시킨다. 0이면(기본값, 일반 빌드 포함) 아무 영향이 없다.
+    private static var forcedSaveFailuresRemaining: Int = {
+        Int(ProcessInfo.processInfo.environment["YARN_DRAWER_UI_TEST_FORCE_SAVE_FAILURE_COUNT"] ?? "") ?? 0
+    }()
+
+    private static func consumeForcedSaveFailureIfNeeded() throws {
+        guard forcedSaveFailuresRemaining > 0 else {
+            return
+        }
+        forcedSaveFailuresRemaining -= 1
+        throw PatternStoreError.forcedTestSaveFailure
+    }
+    #endif
 }
