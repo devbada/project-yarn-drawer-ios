@@ -8,6 +8,7 @@ enum PatternStoreError: LocalizedError {
     case invalidSymbolGlyph
     case invalidSymbolName
     case invalidSymbolLink
+    case missingSymbolPatternID
     case systemSymbolEditNotAllowed
     #if DEBUG
     case forcedTestSaveFailure
@@ -29,6 +30,8 @@ enum PatternStoreError: LocalizedError {
             "기호 이름은 1자 이상 60자 이하로 입력해 주세요."
         case .invalidSymbolLink:
             "외부 링크는 https 주소로 입력해 주세요."
+        case .missingSymbolPatternID:
+            "도안 전용 기호는 도안 정보가 있어야 저장할 수 있습니다."
         case .systemSymbolEditNotAllowed:
             "기본 기호는 삭제할 수 없습니다."
         #if DEBUG
@@ -399,6 +402,12 @@ final class PatternStore: ObservableObject {
             else {
                 throw PatternStoreError.invalidSymbolLink
             }
+        }
+        // 도안 전용 기호가 patternID 없이 저장되면 symbols(for:)에도 commonSymbols()에도
+        // 잡히지 않는 고아 기호가 된다. UI가 범위 picker를 숨겨 대부분 막고 있지만,
+        // 저장소 계층 자체의 불변식으로 한 번 더 막는다.
+        guard draft.scope != .pattern || draft.patternID != nil else {
+            throw PatternStoreError.missingSymbolPatternID
         }
 
         let existingSymbol = draft.id.flatMap { id in

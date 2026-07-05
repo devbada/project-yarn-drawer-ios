@@ -55,7 +55,8 @@ xcodebuild test -project YarnDrawer.xcodeproj -scheme YarnDrawer -destination 'p
 - [x] 게이지 계산기
 - [x] 도안 상세정보·게이지·실 정보 저장
 - [x] 도안 수정·삭제와 파일 재연결
+- [x] 공통/도안 전용 기호 관리: 검색, 즐겨찾기 필터, drawing canvas로 사용자 기호 등록·편집·삭제
+- [x] 저장 실패 재시도 진입점, 파일 누락 감지와 재연결 진입점
 - [ ] 실제 PDF annotation 또는 편집본 내보내기
-- [ ] 사용자 기호 등록·편집
 - [ ] 게이지 계산기 단 수/실제 길이 계산
 - [ ] 로컬 백업 내보내기·가져오기

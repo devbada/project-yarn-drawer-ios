@@ -21,6 +21,32 @@ final class PatternStoreTests: XCTestCase {
         )
     }
 
+    func testPatternScopedSymbolWithoutPatternIDIsRejectedAndNotPersisted() async throws {
+        let (store, rootURL) = makeIsolatedStore()
+        defer { try? FileManager.default.removeItem(at: rootURL) }
+
+        let orphanDraft = makeDraft(scope: .pattern, patternID: nil, name: "고아 기호")
+
+        do {
+            try await store.saveSymbol(orphanDraft)
+            XCTFail("patternID가 없는 도안 전용 기호는 저장이 거부돼야 한다")
+        } catch PatternStoreError.missingSymbolPatternID {
+            // 예상된 실패
+        }
+
+        XCTAssertFalse(
+            store.symbols.contains { $0.name == "고아 기호" },
+            "거부된 기호가 메모리 상태에 남으면 안 된다"
+        )
+
+        let (reloadedStore, _) = makeIsolatedStore(rootURL: rootURL)
+        await reloadedStore.load()
+        XCTAssertFalse(
+            reloadedStore.symbols.contains { $0.name == "고아 기호" },
+            "거부된 기호가 저장소 파일에도 반영되면 안 된다"
+        )
+    }
+
     func testFavoriteSymbolOrderPersistsAfterRelaunch() async throws {
         let (store, rootURL) = makeIsolatedStore()
         defer { try? FileManager.default.removeItem(at: rootURL) }
