@@ -383,12 +383,18 @@ struct PatternGaugeInfo: Codable, Hashable {
 struct PatternMaterialInfo: Codable, Hashable {
     var yarnName: String?
     var yarnWeight: String?
+    var fiberContent: String?
+    var yarnAmount: String?
+    var yarnColor: String?
     var needleSizeMM: Double?
     var hookSizeMM: Double?
 
     var isEmpty: Bool {
         yarnName == nil &&
             yarnWeight == nil &&
+            fiberContent == nil &&
+            yarnAmount == nil &&
+            yarnColor == nil &&
             needleSizeMM == nil &&
             hookSizeMM == nil
     }

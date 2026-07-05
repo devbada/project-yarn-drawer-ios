@@ -1,8 +1,45 @@
+import UIKit
 import XCTest
 @testable import YarnDrawer
 
 @MainActor
 final class PatternStoreTests: XCTestCase {
+    /// Phase 3: 상세정보에 표시되는 등록일/수정일이 실제 저장 흐름과 맞물려 동작하는지 검증한다.
+    /// 등록일은 최초 등록 시점에 고정돼야 하고, 수정일은 `updatePattern` 저장마다 갱신돼야 한다.
+    func testUpdatePatternBumpsUpdatedAtWhileKeepingCreatedAtStable() async throws {
+        let (store, rootURL) = makeIsolatedStore()
+        defer { try? FileManager.default.removeItem(at: rootURL) }
+        let pdfURL = try makeTestPDF()
+        defer { try? FileManager.default.removeItem(at: pdfURL) }
+
+        let draft = PatternImportDraft(
+            sourceURL: pdfURL,
+            title: "등록일 테스트 도안",
+            designerName: "",
+            craftType: .knitting,
+            tagsText: ""
+        )
+        let imported = await store.importPattern(draft)
+        XCTAssertTrue(imported)
+        let pattern = try XCTUnwrap(store.selectedPattern)
+        let createdAt = pattern.createdAt
+        let updatedAtAfterImport = pattern.updatedAt
+
+        try await Task.sleep(nanoseconds: 20_000_000)
+
+        var editedPattern = pattern
+        editedPattern.title = "등록일 테스트 도안 (수정)"
+        try await store.updatePattern(editedPattern)
+
+        let reloaded = try XCTUnwrap(store.pattern(id: pattern.id))
+        XCTAssertEqual(reloaded.createdAt, createdAt, "수정해도 등록일은 바뀌면 안 된다")
+        XCTAssertGreaterThan(
+            reloaded.updatedAt,
+            updatedAtAfterImport,
+            "저장하면 수정일이 이전 값보다 최신으로 갱신돼야 한다"
+        )
+    }
+
     func testPatternScopedSymbolIsIsolatedByPatternID() async throws {
         let (store, rootURL) = makeIsolatedStore()
         defer { try? FileManager.default.removeItem(at: rootURL) }
@@ -172,5 +209,18 @@ final class PatternStoreTests: XCTestCase {
             linkURLString: "",
             isFavorite: isFavorite
         )
+    }
+
+    private func makeTestPDF() throws -> URL {
+        let pageBounds = CGRect(x: 0, y: 0, width: 200, height: 300)
+        let renderer = UIGraphicsPDFRenderer(bounds: pageBounds)
+        let url = FileManager.default.temporaryDirectory
+            .appending(path: "pattern-store-test-\(UUID().uuidString).pdf")
+        try renderer.writePDF(to: url) { context in
+            context.beginPage()
+            UIColor.white.setFill()
+            context.fill(pageBounds)
+        }
+        return url
     }
 }

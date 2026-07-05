@@ -33,6 +33,9 @@ final class PatternModelTests: XCTestCase {
         pattern.materialInfo = PatternMaterialInfo(
             yarnName: "메리노 울",
             yarnWeight: "DK",
+            fiberContent: "메리노 100%",
+            yarnAmount: "3볼(450g)",
+            yarnColor: "네이비",
             needleSizeMM: 4,
             hookSizeMM: nil
         )
@@ -42,7 +45,11 @@ final class PatternModelTests: XCTestCase {
         let decoded = try JSONDecoder().decode(PatternItem.self, from: encoded)
 
         XCTAssertEqual(decoded.gaugeInfo?.stitches, 20)
+        XCTAssertEqual(decoded.gaugeInfo?.rows, 28)
         XCTAssertEqual(decoded.materialInfo?.needleSizeMM, 4)
+        XCTAssertEqual(decoded.materialInfo?.fiberContent, "메리노 100%")
+        XCTAssertEqual(decoded.materialInfo?.yarnAmount, "3볼(450g)")
+        XCTAssertEqual(decoded.materialInfo?.yarnColor, "네이비")
         XCTAssertEqual(decoded.notes, "소매부터 시작")
         XCTAssertTrue(decoded.searchableText.contains("dk"))
     }
@@ -54,5 +61,22 @@ final class PatternModelTests: XCTestCase {
         XCTAssertNil(decoded.gaugeInfo)
         XCTAssertNil(decoded.materialInfo)
         XCTAssertNil(decoded.notes)
+    }
+
+    func testLegacyMaterialInfoWithoutNewFieldsStillDecodes() throws {
+        let json = """
+        {
+          "yarnName": "메리노 울",
+          "yarnWeight": "DK",
+          "needleSizeMM": 4
+        }
+        """
+        let decoded = try JSONDecoder().decode(PatternMaterialInfo.self, from: Data(json.utf8))
+
+        XCTAssertEqual(decoded.yarnName, "메리노 울")
+        XCTAssertEqual(decoded.needleSizeMM, 4)
+        XCTAssertNil(decoded.fiberContent, "구버전 JSON에 없던 필드는 안전하게 nil로 복원돼야 한다")
+        XCTAssertNil(decoded.yarnAmount)
+        XCTAssertNil(decoded.yarnColor)
     }
 }

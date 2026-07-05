@@ -194,8 +194,9 @@ struct PatternViewerView: View {
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
             case .gauge:
-                GaugeCalculatorView()
-                    .presentationDetents([.medium])
+                GaugeCalculatorView(pattern: store.pattern(id: pattern.id) ?? pattern)
+                    .environmentObject(store)
+                    .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
             case .details:
                 PatternDetailsView(patternID: pattern.id) {

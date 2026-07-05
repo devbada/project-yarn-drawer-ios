@@ -17,6 +17,9 @@ struct PatternDetailsView: View {
     @State private var gaugeLength = ""
     @State private var yarnName = ""
     @State private var yarnWeight = ""
+    @State private var fiberContent = ""
+    @State private var yarnAmount = ""
+    @State private var yarnColor = ""
     @State private var needleSize = ""
     @State private var hookSize = ""
     @State private var notes = ""
@@ -79,6 +82,15 @@ struct PatternDetailsView: View {
                             }
                             field("실 굵기") {
                                 TextField("예: DK, 4ply", text: $yarnWeight)
+                            }
+                            field("섬유") {
+                                TextField("예: 메리노 100%", text: $fiberContent)
+                            }
+                            field("사용량") {
+                                TextField("예: 3볼(450g)", text: $yarnAmount)
+                            }
+                            field("색상") {
+                                TextField("예: 네이비", text: $yarnColor)
                             }
                             HStack(spacing: YDSpacing.x2) {
                                 numberField("대바늘 mm", text: $needleSize)
@@ -309,6 +321,8 @@ struct PatternDetailsView: View {
             informationRow("파일명", pattern.originalFileName)
             informationRow("형식", pattern.sourceFileType.rawValue.uppercased())
             informationRow("페이지", "\(pattern.pageCount)쪽")
+            informationRow("등록일", pattern.createdAt.formatted(date: .abbreviated, time: .omitted))
+            informationRow("수정일", pattern.updatedAt.formatted(date: .abbreviated, time: .omitted))
             if store.missingFilePatternIDs.contains(pattern.id) {
                 Text("원본 또는 작업용 PDF 파일이 누락되었습니다.")
                     .font(YDFont.font(size: 12, weight: .bold))
@@ -366,6 +380,9 @@ struct PatternDetailsView: View {
         gaugeLength = pattern.gaugeInfo?.measurementLengthCM.editText ?? ""
         yarnName = pattern.materialInfo?.yarnName ?? ""
         yarnWeight = pattern.materialInfo?.yarnWeight ?? ""
+        fiberContent = pattern.materialInfo?.fiberContent ?? ""
+        yarnAmount = pattern.materialInfo?.yarnAmount ?? ""
+        yarnColor = pattern.materialInfo?.yarnColor ?? ""
         needleSize = pattern.materialInfo?.needleSizeMM.editText ?? ""
         hookSize = pattern.materialInfo?.hookSizeMM.editText ?? ""
         notes = pattern.notes ?? ""
@@ -399,6 +416,9 @@ struct PatternDetailsView: View {
             let material = PatternMaterialInfo(
                 yarnName: yarnName.nilIfBlank,
                 yarnWeight: yarnWeight.nilIfBlank,
+                fiberContent: fiberContent.nilIfBlank,
+                yarnAmount: yarnAmount.nilIfBlank,
+                yarnColor: yarnColor.nilIfBlank,
                 needleSizeMM: try number(needleSize, label: "대바늘 크기"),
                 hookSizeMM: try number(hookSize, label: "코바늘 크기")
             )

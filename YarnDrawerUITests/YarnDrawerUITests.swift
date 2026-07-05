@@ -417,6 +417,127 @@ final class YarnDrawerUITests: XCTestCase {
         )
     }
 
+    /// 게이지 계산기 확장(Phase 3): 코·단 수 게이지를 함께 계산하고 "상세정보에 게이지 저장"으로
+    /// 실제 `pattern.gaugeInfo`에 반영되는지 확인한다. 상세정보 화면의 게이지 3개 필드는
+    /// 플레이스홀더가 전부 "선택"으로 동일해 접근성 식별자가 모호하므로, 값마다 고유한
+    /// 라벨을 쓰는 게이지 계산기 재진입 경로로 저장 성공을 검증한다.
+    func testGaugeCalculatorSavesStitchAndRowGaugeToPatternDetails() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["YARN_DRAWER_UI_TEST_MODE"] = "1"
+        app.launchEnvironment["YARN_DRAWER_UI_TEST_RESET_DATA"] = "1"
+        app.launchEnvironment["YARN_DRAWER_UI_TEST_SEED_PDF"] = "1"
+        app.launch()
+
+        XCTAssertTrue(app.staticTexts["실사용 PDF 테스트 도안"].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.buttons["더보기"].waitForExistence(timeout: 8))
+        app.buttons["더보기"].tap()
+
+        XCTAssertTrue(app.staticTexts["게이지 계산기"].waitForExistence(timeout: 5))
+        app.staticTexts["게이지 계산기"].tap()
+
+        XCTAssertTrue(app.navigationBars["게이지 계산기"].waitForExistence(timeout: 5))
+
+        let stitchesField = app.textFields["측정한 코 수"]
+        XCTAssertTrue(stitchesField.waitForExistence(timeout: 5))
+        clearTextField(stitchesField)
+        stitchesField.typeText("20")
+
+        let rowsField = app.textFields["측정한 단 수"]
+        XCTAssertTrue(rowsField.waitForExistence(timeout: 5))
+        rowsField.tap()
+        rowsField.typeText("28")
+
+        let targetHeightField = app.textFields["목표 세로 길이(cm)"]
+        XCTAssertTrue(targetHeightField.waitForExistence(timeout: 5))
+        targetHeightField.tap()
+        targetHeightField.typeText("60")
+
+        // 측정 길이(cm)와 목표 가로 길이(cm)는 기본값(10, 48)을 그대로 사용한다.
+        XCTAssertTrue(app.staticTexts["96코"].waitForExistence(timeout: 5), "코 수 계산 결과가 화면에 반영돼야 한다")
+        XCTAssertTrue(app.staticTexts["168단"].waitForExistence(timeout: 5), "단 수 계산 결과가 화면에 반영돼야 한다")
+
+        let saveButton = app.buttons["상세정보에 게이지 저장"]
+        XCTAssertTrue(saveButton.waitForExistence(timeout: 5))
+        saveButton.tap()
+
+        XCTAssertTrue(
+            app.staticTexts["게이지를 상세정보에 저장했습니다."].waitForExistence(timeout: 8),
+            "저장이 성공하면 확인 메시지가 보여야 한다"
+        )
+
+        app.buttons["닫기"].tap()
+
+        // 다시 열어 저장된 값이 프리필되는지로 실제 저장 성공을 확인한다.
+        XCTAssertTrue(app.buttons["더보기"].waitForExistence(timeout: 5))
+        app.buttons["더보기"].tap()
+        XCTAssertTrue(app.staticTexts["게이지 계산기"].waitForExistence(timeout: 5))
+        app.staticTexts["게이지 계산기"].tap()
+
+        XCTAssertTrue(app.navigationBars["게이지 계산기"].waitForExistence(timeout: 5))
+        let reopenedStitches = app.textFields["측정한 코 수"]
+        XCTAssertTrue(reopenedStitches.waitForExistence(timeout: 5))
+        XCTAssertEqual(reopenedStitches.value as? String, "20")
+        XCTAssertEqual(app.textFields["측정한 단 수"].value as? String, "28")
+        XCTAssertEqual(app.textFields["측정 길이(cm)"].value as? String, "10")
+    }
+
+    /// 실·바늘 상세정보 확장(Phase 3): 섬유/사용량/색상 자유 입력 필드를 저장하면 실제
+    /// `pattern.materialInfo`에 반영되고, 상세정보를 다시 열었을 때도 유지되는지 확인한다.
+    /// 파일 정보 섹션에 등록일/수정일 행이 표시되는지도 함께 검증한다.
+    func testMaterialDetailFieldsPersistAndDatesAreDisplayed() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["YARN_DRAWER_UI_TEST_MODE"] = "1"
+        app.launchEnvironment["YARN_DRAWER_UI_TEST_RESET_DATA"] = "1"
+        app.launchEnvironment["YARN_DRAWER_UI_TEST_SEED_PDF"] = "1"
+        app.launch()
+
+        XCTAssertTrue(app.staticTexts["실사용 PDF 테스트 도안"].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.buttons["더보기"].waitForExistence(timeout: 8))
+        app.buttons["더보기"].tap()
+
+        XCTAssertTrue(app.staticTexts["상세정보"].waitForExistence(timeout: 5))
+        app.staticTexts["상세정보"].tap()
+
+        XCTAssertTrue(app.navigationBars["도안 상세"].waitForExistence(timeout: 5))
+
+        XCTAssertTrue(app.staticTexts["등록일"].waitForExistence(timeout: 5), "등록일 행이 표시돼야 한다")
+        XCTAssertTrue(app.staticTexts["수정일"].exists, "수정일 행이 표시돼야 한다")
+
+        let fiberField = app.textFields["예: 메리노 100%"]
+        XCTAssertTrue(fiberField.waitForExistence(timeout: 5))
+        fiberField.tap()
+        fiberField.typeText("메리노 100%")
+
+        let amountField = app.textFields["예: 3볼(450g)"]
+        XCTAssertTrue(amountField.waitForExistence(timeout: 5))
+        amountField.tap()
+        amountField.typeText("3볼(450g)")
+
+        let colorField = app.textFields["예: 네이비"]
+        XCTAssertTrue(colorField.waitForExistence(timeout: 5))
+        colorField.tap()
+        colorField.typeText("네이비")
+
+        app.buttons["저장"].tap()
+
+        // 저장이 성공하면 상세정보 sheet가 닫히고 뷰어로 돌아간다.
+        XCTAssertTrue(app.buttons["더보기"].waitForExistence(timeout: 8))
+
+        // 다시 열어 값이 실제로 저장돼 유지되는지 확인한다.
+        app.buttons["더보기"].tap()
+        XCTAssertTrue(app.staticTexts["상세정보"].waitForExistence(timeout: 5))
+        app.staticTexts["상세정보"].tap()
+
+        XCTAssertTrue(app.navigationBars["도안 상세"].waitForExistence(timeout: 5))
+        let reopenedFiberField = app.textFields["예: 메리노 100%"]
+        XCTAssertTrue(reopenedFiberField.waitForExistence(timeout: 5))
+        XCTAssertEqual(reopenedFiberField.value as? String, "메리노 100%")
+        XCTAssertEqual(app.textFields["예: 3볼(450g)"].value as? String, "3볼(450g)")
+        XCTAssertEqual(app.textFields["예: 네이비"].value as? String, "네이비")
+
+        app.buttons["닫기"].tap()
+    }
+
     /// 일반 SwiftUI `TextField`는 UIKit의 clear 버튼이 없으므로, 현재 값 길이만큼
     /// backspace를 보내 지운다.
     private func clearTextField(_ field: XCUIElement) {
