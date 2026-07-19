@@ -1,0 +1,91 @@
+<head><title></title><meta charset="utf-8"><link rel="stylesheet" href="./styles.css"></head><body class="light-theme blue_sky" style="padding: 20px;"><div class="shine-editor">
+
+
+<div><h1>Branch 생성하기</h1></div>
+
+
+
+
+
+
+
+
+<ol type="1"><li>Branch &gt; 하나의 작업 공간 (기록 공간)</li><ul type="circle"><li>Branch는 말 그대로 가지입니다. 메인 작업 공간에서 별도의 작업을 하기 위해 생성되는 가지라고 볼 수 있습니다.</li></ul></ol><img width="766px" src="Files/image%2029.png">
+
+<ul type="circle"><li>위의 이미지를 살펴보면 <b>Master </b>라는 메인 Branch 가 있고 Master에서 뻗어 나온 <b>feature_x </b>라는 또 다른 Branch 가 있습니다.</li><li>Branch 간의 중요도는 따로 지정되지 않고, <b>작업자</b><b>, </b><b>작업팀</b>에 따라 다르게 정해질 수 있습니다. (<a href="https://gist.github.com/ihoneymon/a28138ee5309c73e94f9">git-flow에 대해 읽어보기</a>)</li></ul><img alt="ãã©ã³ãã¨ã¯" width="875px" src="Files/image%2030.png">
+
+<ul type="square"><li>이미지 출처(<a spellcheck="false" class="shine-break-all" href="https://backlog.com/git-tutorial/kr/stepup/stepup1_1.html">https://backlog.com/git-tutorial/kr/stepup/stepup1_1.html</a>)</li><li>다양한 Branch를 생성하여 작업을 구분하거나 작업자를 분류할 수 있습니다.</li></ul><div>&nbsp;</div>
+
+<ol type="1"><li>&nbsp;Branch를 만든다는 것은? &gt; 새로운 작업을 진행하겠다는 것!</li><ul type="circle"><li>동작되고 있는 어떠한 사이트에 새로운 요구사항이 들어왔습니다.</li><ul type="disc"><li>예를 들어 <b>[ </b><b>"index.jsp"</b><b>의</b> <b>디자인을</b> <b>변경해</b> <b>주세요</b><b> ] </b>와 같은 요구사항이 들어왔다면, 새로운 Branch 를 만들어 작업하면 됩니다.</li><ul type="square"><li>물론, 업무 상황에 맞게 작업해야 하며 무분별한 Branch의 생성은 관리가 힘들어지게 됩니다.</li></ul><li>그리고 또 하나 더 [ <b>"main.jsp" </b><b>에</b> <b>새로운</b> <b>사용자를</b> <b>추가할</b> <b>수</b> <b>있도록</b> <b>팝업</b> <b>연결과</b> <b>팝업</b> <b>페이지를</b> <b>함께</b> <b>만들어</b> <b>주세요</b> ] 와 같은 요구사항이 들어온다면, 역시 새로운 Branch 를 만들어 작업하면 됩니다.</li></ul></ul></ol><img alt="https://backlog.com/git-tutorial/kr/intro/intro1_2.html" width="920px" src="Files/image%2031.png">
+
+<ul type="disc"><li>이미지 출처: <a href="https://backlog.com/git-tutorial/kr/intro/intro1_2.html">https://backlog.com/git-tutorial/kr/intro/intro1_2.html</a></li></ul><ol type="1"><li>Branch 생성 전 미리보기</li><ul type="circle"><li>가상의 상황</li><ul type="disc"><li>
+       
+       <div class="shine-table-wrapper"><table><colgroup><col style="width: 160px;"><col style="width: 160px;"></colgroup>
+        <tbody><tr>
+         <td>
+         <div style="text-align: center;"><b>요구사항</b></div>
+         </td>
+         <td>
+         <b>"index.jsp"</b><b>의</b> <b>디자인을</b> <b>변경해</b> <b>주세요</b><b>.<br>
+                  "main.jsp" </b><b>에</b> <b>새로운</b> <b>사용자를</b> <b>추가할</b> <b>수</b> <b>있도록</b> <b>팝업</b> <b>연결과</b> <b>팝업</b> <b>페이지를</b> <b>함께</b> <b>만들어</b> <b>주세요</b>
+         </td>
+        </tr>
+        <tr>
+         <td>
+         <div style="text-align: center;"><b>누가</b><b>?</b></div>
+         </td>
+         <td>
+         <b>2</b><b>명의</b> <b>개발자</b><b> (D1, D2)</b>
+         </td>
+        </tr>
+       </tbody></table></div>
+       
+   </li></ul><li>2명의 개발자가 각각 요구사항을 받고 각각 Branch를 생성하여 작업하는 상황을 예를 들어보겠습니다.</li><ul type="disc"><li>(*) 물론 요구사항 파악을 하며 중첩되는 영역은 또 다른 Branch 를 생성하여 진행하여야 합니다.</li><ul type="square"><li>중첩되는 작업은 별도로 진행하고 해당 작업이 완료되면 Commit
+        &gt; Push &gt; Merge 과정을 거쳐 개별 작업 Branch로
+        "Merge" 하여 사용해야 합니다.</li></ul></ul></ul><li>Branch 생성하기</li><ul type="circle"><li>저장소의 메인화면에서 아래와 같이 Branch 영역으로 접근할 수 있습니다.</li><ul type="disc"><li>Repository &gt;
+       Branches</li></ul></ul></ol><img width="935px" src="Files/image%2032.png">
+
+<ul type="circle"><li>오른쪽 위를 보면 <b>New Branch </b>버튼이 있고, 이 버튼을 클릭하여 새로운 Branch 를 생성할 수 있습니다.</li></ul><img width="952px" src="Files/image%2033.png">
+
+<div>&nbsp;</div>
+
+<img width="938px" src="Files/image%2034.png">
+
+<ul type="square"><li>
+     
+     <div class="shine-table-wrapper"><table><colgroup><col style="width: 160px;"><col style="width: 160px;"></colgroup>
+      <tbody><tr>
+       <td>
+       <div style="text-align: center;"><b>1</b></div>
+       </td>
+       <td>
+       Branch name을 지정합니다. 요구사항 번호를 지정하고 이하 요구사항의 명세를 간략하게 표현한 영문/숫자 이름을 추천합니다.
+       </td>
+      </tr>
+      <tr>
+       <td>
+       <div style="text-align: center;"><b>2</b></div>
+       </td>
+       <td>
+       현재 Branch를 어디의 기준으로 생성할 지 선택합니다. master Branch 를 선택한다면, 현재의 master
+       Branch의 최종 기록(모습)을 기준 입니다.
+       </td>
+      </tr>
+     </tbody></table></div>
+     
+ </li></ul><div>&nbsp;</div>
+
+<ul type="disc"><li>Create
+     branch 버튼을 클릭하면 새로운 Branch 가 GitLab 서버에 생성됩니다. 생성된 Branch의 모습을 확인해 보세요.</li></ul><img width="915px" src="Files/image%2035.png">
+
+<div>&nbsp;</div>
+
+<div>&nbsp;</div>
+
+<h1>-끝-</h1>
+
+
+
+
+
+<br></div></body>

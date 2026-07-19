@@ -1,0 +1,153 @@
+<head><title></title><meta charset="utf-8"><link rel="stylesheet" href="./styles.css"></head><body class="light-theme blue_sky" style="padding: 20px;"><div class="shine-editor">
+
+
+<h1>Commit과 Push, 그리고 Fetch와 Pull</h1><div><br></div>
+
+
+
+
+<div class="shine-table-wrapper"><table><colgroup><col style="width: 160px;"><col style="width: 461px;"><col style="width: 200px;"></colgroup>
+ <tbody><tr>
+  <td>
+  <div style="text-align: center;"><b>작업</b></div>
+  </td>
+  <td>
+  <div style="text-align: center;"><b>설명</b></div>
+  </td>
+  <td>
+  <div style="text-align: center;"><b>저장위치</b></div>
+  </td>
+ </tr>
+ <tr>
+  <td>
+  <div style="text-align: right;"><b>Commit</b></div>
+  </td>
+  <td>
+  현재 작업 내역을 기록(저장) 하는 것
+  </td>
+  <td>
+  내 컴퓨터
+  </td>
+ </tr>
+ <tr>
+  <td>
+  <div style="text-align: right;"><b>Push</b></div>
+  </td>
+  <td>
+  Commit(=기록(저장))된 작업 내역을 원격지 서버에 기록(저장) 하는 것
+  </td>
+  <td>
+  <u>Git(</u><u>혹은</u><u> GitLab) </u><u>저장소</u>
+  </td>
+ </tr>
+ <tr>
+  <td>
+  <div style="text-align: right;"><b>Fetch</b></div>
+  </td>
+  <td>
+  Git 저장소의 정보를 가져와서 작업영역에 업데이트 하는 것
+  </td>
+  <td>
+  내 컴퓨터
+  </td>
+ </tr>
+ <tr>
+  <td>
+  <div style="text-align: right;"><b>Pull</b></div>
+  </td>
+  <td>
+  현재 작업영역의 Branch 정보를 서버의 최신 정보로 업데이트 하는 것
+  </td>
+  <td>
+  내 컴퓨터
+  </td>
+ </tr>
+</tbody></table></div>
+
+
+
+<div>&nbsp;</div>
+
+<ol type="1"><li>Commit: 지금까지 작업한 내용을 기록한다.</li><ul type="circle"><li>파일 혹은 작업공간에서 작업한 내용을 수정하고 Local
+      Branch (작업공간의 영역) 에 기록하는 것을 Commit 이라고 합니다.</li><ul type="disc"><li>참고: SVN에서의 Commit은 서버까지의 전송을 뜻합니다.</li></ul><li>파일을 수정하면 아래의 이미지와 같이 수정된 것을 확인할 수 있습니다.</li></ul></ol><div>
+
+<img width="930px" src="Files/image%2044.png">
+
+</div><ul type="circle"><li>작업공간에서 마우스 오른쪽 클릭 메뉴 -&gt; Git
+     Commit... 을 클릭합니다.</li></ul><div>
+
+<img width="1014px" src="Files/image%2045.png"><img width="893px" src="Files/image%2046.png">
+
+</div><ul type="square"><li>
+     
+     <div class="shine-table-wrapper"><table><colgroup><col style="width: 160px;"><col style="width: 160px;"></colgroup>
+      <tbody><tr>
+       <td>
+       <div style="text-align: center;"><b>1</b></div>
+       </td>
+       <td>
+       Commit 메시지 내용을 기록합니다. 메시지는 필수이며, Branch의 이름을 첨부하면 기록/검색 할 때 용이하므로 작성하는 것을 권해드립니다.
+       </td>
+      </tr>
+      <tr>
+       <td>
+       <div style="text-align: center;"><b>2</b></div>
+       </td>
+       <td>
+       Commit 할 대상 파일들을 확인합니다. 신규 파일의 경우 선택이 해제(=versioning 이 되지 않은 상태)되어 있으므로 별도로 확인하세요.
+       </td>
+      </tr>
+      <tr>
+       <td>
+       <div style="text-align: center;"><b>3</b></div>
+       </td>
+       <td>
+       Commit, ReCommit, Commit &amp; Push 기능을 사용할 수 있습니다. (TortoiseGit에서
+       지원하는 기능)
+       </td>
+      </tr>
+     </tbody></table></div>
+     
+ </li></ul><div>&nbsp;</div><div>
+
+<img width="817px" src="Files/image%2047.png">
+
+</div><ul type="square"><li>Commit 완료 후 다이얼로그 화면입니다. 몇 개의 파일이 적용되었는지 확인할 수 있습니다.</li></ul><ol type="1"><li>Push: 서버에 변경된 내용을 전송한다.</li><ul type="circle"><li>지금까지 작업을 요약하면 아래와 같습니다.</li><ul type="disc"><li>서버에서 Branch를 생성하고, 내 컴퓨터의 작업공간에서
+       Switch/Checkout을 하였으며, Branch 에서 작업한 내용을 Commit 까지 하였습니다.</li></ul><li>서버에서 Branch를 생성한 작업을 제외하고 나머지 과정은 모두 내 컴퓨터에서 이뤄진 일입니다.</li><li>즉, 서버에서 Branch 를 생성하고 fetch 하기 전까지 내 컴퓨터는 몰랐던 것을 이제는 서버가 알지 못하는 상태겠죠.</li><li>이 모든 변경된 내역을 서버에 적용하려면 Push 하는 작업이 필요합니다.</li><li>Push는 Commit이 정상적으로 완료된 상태에서 진행해야 하며, 마지막 Commit 된 작업 내용이 대상입니다.</li></ul><ol type="1"><li>GitLab 저장소로 이동하여, Branches를 가면 현재 Branch들의 상태를 확인할 수 있습니다.</li></ol></ol><div>
+
+<img width="838px" src="Files/image%2048.png">
+
+</div><ul type="disc"><li>SR-001-changeIndexDesign
+     Branch에서 작업했다고 생각했지만 아직은 아무런 변화가 없습니다.</li><li>그 이유는 아직 서버에 변경된 내역을 전송(Push)하지 않았기 때문입니다.</li></ul><ol type="1"><li>작업 공간에서 <b>마우스오른쪽</b> <b>클릭</b> <b>메뉴</b><b> &gt; Tortoise Git &gt; Push … </b>를 클릭합니다.</li></ol><div>
+
+<img width="847px" src="Files/image%2049.png">
+
+</div><ul type="square"><li><b><i>여기서</i></b> <b><i>잠깐</i></b></li><ul type="disc"><li>이 매뉴얼에서는 혼자만 작업하는 것을 가정하고 있습니다. 그러나 실제 프로젝트 혹은 업무에서는 여러 명의 사용자가 공통 저장소를 사용하게 됩니다.</li><li>그렇다면 내가 작업했던 그 시간, 다른 사람들이 서버의 메인
+      Branch(master)에 많은 정보를 Push 하였을 수 있습니다.</li><li>따라서 항상 <b>Push </b><b>하기</b> <b>전</b><b>,</b><b> Fetch</b><b>와</b> <b>Merge</b><b>… </b>과정을 거친 후 <b>Push
+      </b>를 해야 충돌을 미연에 방지할 수 있습니다.</li><ul type="disc"><li>Git 은 SVN에 비해
+       Push, Merge 정책이 매우 강력합니다. Conflict(충돌)이 발생된 경우
+       &gt; 서버로 올릴 수 없습니다.</li></ul></ul></ul><ol type="1"><li>Push 전 정보 확인하기</li></ol><div>
+
+<img width="830px" src="Files/image%2050.png">
+
+</div><ul type="square"><li>Push 작업은 매우 신중하게 작업해야 합니다.</li><li>현재 Branch 는 어떤 것이며, 원격지(서버)는 어디인지 표시되므로 확인 후 진행해야 합니다.</li></ul><div>
+
+<img width="833px" src="Files/image%2051.png">
+
+</div><ul type="square"><li>Push 가 성공적으로 완료되면 위와 같이 나타납니다. Commit 후
+     메시지와 비슷합니다만 세부 내용에는 원격지 정보도 함께 표시됩니다.</li><li>위 다이얼로그에서
+     "Create pull request" 라는 버튼이 보이시나요?</li><ul type="disc"><li>이 버튼의 역할은 현재 서버까지 전송된 나의 작업 영역 Branch 를 저장소 메인
+      Branch(master)에 병합하는 것을 요청하는 것입니다.</li><li>Pull
+      Request 혹은 Merge Request 라고 합니다.</li><li>GitLab을 사용할 때는 GitLab 메인 저장소 웹 페이지에서 진행하므로 위 다이얼로그에서는 추가 작업이 필요하지 않습니다. (Close)</li></ul></ul><div>&nbsp;</div><div>
+
+<img width="853px" src="Files/image%2052.png">
+
+</div><ul type="square"><li>GitLab에서 Branches 정보를 다시 확인해 봅니다. 서버에 마지막 Commit되고 Push 된 정보가 표시되는 것을 확인할 수 있습니다.</li></ul><div>&nbsp;</div>
+
+<h1>-끝-</h1>
+
+
+
+
+
+</div></body>
