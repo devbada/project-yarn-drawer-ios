@@ -1,0 +1,147 @@
+<head><title></title><meta charset="utf-8"><link rel="stylesheet" href="./styles.css"></head><body class="light-theme blue_sky" style="padding: 20px;"><div class="shine-editor">
+
+
+<div><h1>Fetch와 Switch/Checkout</h1></div>
+
+
+
+
+
+
+
+
+<div>
+
+<div class="shine-table-wrapper"><table><colgroup><col style="width: 160px;"><col style="width: 160px;"></colgroup>
+ <tbody><tr>
+  <td>
+  <div style="text-align: center;"><b>작업</b></div>
+  </td>
+  <td>
+  <div style="text-align: center;"><b>설명</b></div>
+  </td>
+ </tr>
+ <tr>
+  <td>
+  <div style="text-align: right;"><b>Fetch</b></div>
+  </td>
+  <td>
+  생성된 Branch와 변경된 서버의 정보를 가져옵니다.
+  </td>
+ </tr>
+ <tr>
+  <td>
+  <div style="text-align: right;"><b>Switch / Checkout</b></div>
+  </td>
+  <td>
+  현재 작업공간(Branch)에서 다른 Branch(작업공간)로 변경합니다.
+  </td>
+ </tr>
+</tbody></table></div>
+
+</div>
+
+<div>&nbsp;</div>
+
+<ol type="1"><li>Fetch 하기</li><ul type="disc"><li>요약</li><ul type="disc"><li><b>"</b><a href="onenote:#Branch%20생성하기&amp;section-id={AF7F1009-0ED8-4A2F-9C3E-996192A9BFF9}&amp;page-id={7FE9C5DC-60AF-421C-B644-DC43AEAD7F1B}&amp;object-id={C63D24A0-C4FF-46CD-B814-D73BCD7AAB80}&amp;10&amp;base-path=D:\ITSM_PROJECT_DOC\업무용파일\minam.cho\oneNote\초록우산어린이재단_ITSM\SM_초록우산어린이재단_2018\메뉴얼.one"><b>Branch 생성하기</b></a><b>" </b>매뉴얼에서 만든 새로운 Branch 정보를 받아오고 확인해 봅니다.</li></ul><li>현재 작업공간에서 Branch 확인하기</li><ul type="disc"><li>프로젝트(=소스)가 위치한 곳에서 마우스 오른쪽을 클릭하여 현재 Branch 를 확인합니다.</li></ul></ul></ol><img width="827px" src="Files/image%2036.png">
+
+<ul type="square"><li>현재 작업 공간은
+     "master" Branch 인 것을 확인할 수 있습니다.</li><ul type="disc"><li>참고: 처음 프로젝트를 Clone 하면 master (혹은 기본 Branch) 로 지정됩니다.</li></ul><li>새로운 Branch, 그리고 변경된 저장소 정보 받기 (=fetch)</li><ul type="disc"><li>새로운 Branch는 서버에서만 생성되어 있습니다. 따라서 현재 작업공간(Local
+      Branch)에서는 그 정보를 알 수 없습니다.</li><li>이 정보를 알기 위해 fetch 라는 명령어를 사용하거나
+      TortoiseGit 툴을 사용하여 fetch 할 수 있습니다.</li><li>작업영역의 빈 공간에서 <b>마우스</b> <b>오른쪽</b> <b>클릭</b><b> &gt;
+      TortoiseGit &gt; Fetch … </b></li></ul></ul>
+
+<img width="846px" src="Files/image%2037.png">
+
+<div>&nbsp;</div>
+
+<img width="841px" src="Files/image%2038.png">
+
+<ul type="disc"><li>
+     
+     <div class="shine-table-wrapper"><table><colgroup><col style="width: 160px;"><col style="width: 160px;"></colgroup>
+      <tbody><tr>
+       <td>
+       <div style="text-align: center;"><b>1</b></div>
+       </td>
+       <td>
+       <div>가져올 위치를 선정합니다.</div>
+       <div>특별한 경우가 없다면 orgin (원본위치) 으로 선택하면 됩니다.</div>
+       </td>
+      </tr>
+     </tbody></table></div>
+     
+ </li></ul><div>&nbsp;</div>
+
+<img width="846px" src="Files/image%2039.png">
+
+<ul type="disc"><li>Fetch 결과를 보여줍니다. 위의 빨간박스 내용을 보면 new
+     branch 라고 표기되어 있으며, 서버에서 새로운 branch 정보를 받아왔음을 보여줍니다.</li></ul><ol type="1"><li>switch / checkout 하기</li><ul type="disc"><li>새로운(=다른) Branch 로 변경하기 위해 <b>switch/checkout </b>할 수 있습니다.</li><ul type="disc"><li>
+       
+       <div class="shine-table-wrapper"><table><colgroup><col style="width: 160px;"><col style="width: 160px;"></colgroup>
+        <tbody><tr>
+         <td>
+         <div style="text-align: center;"><b>switch</b></div>
+         </td>
+         <td>
+         다른 Branch로의 전환을 뜻합니다. 이미 Local에 지정된 branch로 변경할 경우 switch 함을 의미합니다.
+         </td>
+        </tr>
+        <tr>
+         <td>
+         <div style="text-align: center;"><b>checkout</b></div>
+         </td>
+         <td>
+         branch의 데이터를 가져옵니다. Local에 선택한 branch 가 없을 경우 checkout 하고 switch 하게 됩니다.
+         </td>
+        </tr>
+       </tbody></table></div>
+       
+   </li></ul></ul></ol><div>&nbsp;</div>
+
+<ul type="disc"><li>작업영역에서 마우스 오른쪽 클릭 &gt; <b>TortoiseGit &gt; Switch/Checkout </b>합니다.</li></ul><img width="884px" src="Files/image%2040.png">
+
+<div>&nbsp;</div>
+
+<img width="890px" src="Files/image%2041.png">
+
+<ul type="square"><li>
+     
+     <div class="shine-table-wrapper"><table><colgroup><col style="width: 160px;"><col style="width: 160px;"></colgroup>
+      <tbody><tr>
+       <td>
+       <div style="text-align: center;"><b>1</b></div>
+       </td>
+       <td>
+       Switch/Checkout 대상 Branch를 선택할 수 있습니다.
+       </td>
+      </tr>
+      <tr>
+       <td>
+       <div style="text-align: center;"><b>2</b></div>
+       </td>
+       <td>
+       Local 에 Branch가 없고 선택한 Branch의 위치가 remotes / ..&nbsp; 인 경우 자동 선택됩니다.
+       </td>
+      </tr>
+     </tbody></table></div>
+     
+ </li><li>OK 버튼을 클릭하면 새로운 Branch로
+     switch/checkout 됩니다.</li></ul>
+
+<img width="903px" src="Files/image%2042.png">
+
+<ul type="disc"><li>참고: 빨간 박스의 내용을 잘 확인하세요.</li><li>실제 사용된 명령어를 함께 확인할 수 있습니다.</li><ul type="disc"><li>git.exe checkout -b
+      SR- … </li></ul></ul><img width="906px" src="Files/image%2043.png">
+
+<ul type="square"><li>이제 변경된 정보를 확인할 수 있습니다.</li></ul><div>&nbsp;</div>
+
+<div>&nbsp;</div>
+
+<h1>-끝-</h1>
+
+
+
+
+
+<br></div></body>
